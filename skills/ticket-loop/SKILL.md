@@ -32,7 +32,7 @@ The repo's agent docs, written by `/setup-matt-pocock-skills`, give the issue tr
 
    Done when the test plan passed and the implementer reports the fixes committed with the checks green.
 
-5. **Ship.** Push, then publish or deploy as CLAUDE.md says. Confirm the ticket closed. Done when both succeeded; a failure is a stop condition.
+5. **Ship.** Update any changelog or release notes CLAUDE.md names (written for its readers: for a game, what a player can now try), commit it, push, then publish or deploy as CLAUDE.md says. Confirm the ticket closed. Done when all succeeded; a failure is a stop condition.
 
 6. **Report.** Tell the user in a few lines what shipped, any decision taken on their behalf, and tickets filed, then what's next. Back to step 1.
 
