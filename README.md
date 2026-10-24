@@ -20,6 +20,10 @@ clear context:
 It stops only when a decision is yours, the milestone is done, the next ticket needs a human,
 something needs you in person (a click, a device, credentials), or a push or publish fails.
 
+## First run
+
+The first time it runs in a repo, it grills you (Matt Pocock's `grilling` skill) about the project: where tickets live and how milestones hold them, the checks command, what gets playtested and how, a reference to stay faithful to, how to ship, where the changelog and milestone summaries go and who reads them, extra stops, the model for each role, commit style, and concurrency. It looks up what the repo already says first, so most questions arrive with an answer to confirm. The answers go to `docs/agents/ticket-loop.md` (with a pointer in `CLAUDE.md`), which every later run reads; edit it to change them, or delete it to be grilled again.
+
 ## Use
 
 ```
@@ -52,8 +56,6 @@ For everyone working in a project, commit this to the project's `.claude/setting
 ## Requires
 
 - [Matt Pocock's skills](https://github.com/mattpocock/skills) (`mattpocock-skills` in the
-  official marketplace): the subagents use its `tdd` and `code-review` skills.
-- A project set up with `/setup-matt-pocock-skills`, so `docs/agents/issue-tracker.md` says
-  where tickets live, their labels and how to find the frontier.
-- A `CLAUDE.md` that says how to run the checks, how to run or playtest the work, and how to
-  publish or deploy.
+  official marketplace): the loop uses its `grilling`, `tdd` and `code-review` skills.
+- Helpful, not required: `/setup-matt-pocock-skills` run in the project first. Its
+  `docs/agents/issue-tracker.md` answers the setup's ticket questions before they're asked.
