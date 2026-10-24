@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "ticket-loop",
+  "description": "Ship a milestone's tickets one at a time, each built and reviewed by fresh subagents, for Claude Code.",
+  "owner": {
+    "name": "John Henson"
+  },
+  "plugins": [
+    {
+      "name": "ticket-loop",
+      "description": "Work a parent issue's tickets one at a time to shipped: a fresh implementer subagent per ticket, an independent two-axis review, push and publish, stopping only for your decisions.",
+      "source": "./",
+      "category": "development"
+    }
+  ]
+}
