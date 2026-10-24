@@ -17,7 +17,7 @@ The repo's agent docs, written by `/setup-matt-pocock-skills`, give the issue tr
 2. **Implement.** Dispatch one implementer subagent (general-purpose, in the background) with a brief that points at: the ticket; CLAUDE.md and the agent docs; any reference source the repo keeps (e.g. a vendored upstream to be faithful to); the previous ticket's commit as a pattern. Its rules:
    - Build it with the Skill tool's `tdd`, at the seams the ticket names (it can't confirm seams with the user, so the ticket's are agreed).
    - Run the repo's automated checks often. It doesn't run or playtest the app itself: that's the test queue's.
-   - Commit locally with the ticket's closing keyword; don't push.
+   - Commit locally with the ticket's closing keyword, staging only the files it changed for this ticket (never `git add -A`: the orchestrator may have edits of its own in the same tree); don't push.
    - File a ticket for any separate problem found, rather than fixing it out of scope.
    - **Decision protocol:** where the ticket and the reference (or the code) disagree in a way the owner may care about, or the ticket is unclear, stop and report the options with a recommendation; don't guess.
    - Report "ready to test" in under 300 words: commit, what was built and where, seams specced, decisions taken, tickets filed, anything unfinished, and a **test plan**: step by step how to run or playtest it as CLAUDE.md says (settings, inputs, what to measure) with the expected results.
@@ -50,3 +50,4 @@ Stop, say why, and wait for the user when:
 
 - One ticket at a time when tickets share a running resource (one app session, one simulator); concurrency is `/implement-spec`'s job. If implementers do run in parallel, the test queue is where they meet: tests still run one at a time, in the main thread.
 - Read diffs only to judge a report, never to redo the subagent's work; your context is the loop's memory across tickets.
+- While a subagent works in the tree, commit your own edits (docs, changelog) at once, so they never end up in its commit.
