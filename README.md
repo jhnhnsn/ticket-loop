@@ -6,12 +6,14 @@ clear context:
 
 1. **Frontier:** the next open, ready-for-agent ticket under the parent issue whose blockers
    are all closed.
-2. **Implement:** a fresh implementer subagent builds it test-first, runs the checks, runs or
-   playtests it as your `CLAUDE.md` says, and commits locally.
+2. **Implement:** a fresh implementer subagent builds it test-first, runs the automated checks,
+   commits locally, and hands over a test plan.
 3. **Decide:** where the ticket and the code disagree in a way you might care about, it stops
    and reports options. Claude asks you, records your answer on the ticket, and carries on.
-4. **Review:** two fresh reviewer subagents (standards and spec) check the commit; the
-   implementer fixes what they find.
+4. **Test and review:** Claude runs the test plan itself from a test queue, one ticket at a
+   time in the main thread (where you can watch), as your `CLAUDE.md` says; meanwhile two fresh
+   reviewer subagents (standards and spec) check the commit. The implementer fixes what they
+   find.
 5. **Ship:** push, then publish or deploy as your `CLAUDE.md` says.
 6. **Report:** a few lines on what shipped, then the next ticket.
 
