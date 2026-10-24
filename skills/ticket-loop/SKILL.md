@@ -41,7 +41,8 @@ The repo's agent docs, written by `/setup-matt-pocock-skills`, give the issue tr
 Stop, say why, and wait for the user when:
 
 - a decision is theirs (step 3 asks it, then carries on);
-- the frontier is empty: the milestone is done, and the next needs a spec, tickets or a grilling (offer `/to-spec`, `/to-tickets` or `/grill-with-docs`);
+- the parent's last ticket has shipped: the milestone is done. Write its summary in any changelog CLAUDE.md names, tell the user what shipped and what is left for them (ready-for-human tickets), and wait; never start the next milestone's tickets yourself, even when they're ready, and offer `/to-spec`, `/to-tickets` or `/grill-with-docs` if it has none;
+- the frontier is empty with tickets still open (all blocked, or ready-for-human): say what blocks them;
 - the next ticket is ready-for-human: tell them what it needs, and take the next ready-for-agent ticket if there is one;
 - something only they can do: a click in a running app, a device check, credentials, a stuck tool;
 - a push, publish or check fails in a way a fix can't safely cover.
