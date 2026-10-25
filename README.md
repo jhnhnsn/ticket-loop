@@ -71,6 +71,20 @@ The answers go to **`docs/agents/ticket-loop.md`**, the loop config, with a poin
 CLAUDE.md; both are committed. Every later run reads it. Edit it to change an answer, or delete
 it to be grilled again.
 
+Then setup **proves the loop closes** by doing each leg of one ticket's cycle itself:
+
+- **Check:** the checks command passes.
+- **Run:** the app starts without a click.
+- **Drive:** a tool operates the app and reads its state, and a test hook takes effect.
+- **Ship:** pushing and publishing need no prompt.
+- **Record:** the changelog is in place.
+
+Each leg that can't be proven becomes a ticket under an **M0 · Closed loop** parent. The loop
+then stops, and you close M0 with Claude in an ordinary session before running it again: the
+loop can't test anything until its own legs close. Later tickets keep the cycle closed by
+building any test hook their test plan needs. See
+[`CLOSED-LOOP.md`](skills/ticket-loop/CLOSED-LOOP.md).
+
 ## How each ticket goes
 
 1. **Frontier:** the next open `ready-for-agent` ticket under the parent whose blockers are all
@@ -93,6 +107,7 @@ it to be grilled again.
 ## When it stops
 
 - A decision is yours (it asks, then carries on).
+- Setup found the loop open: M0's tickets are filed for you to close with Claude.
 - **The milestone is done:** it writes the milestone's summary, tells you what shipped and
   what's left for you (`ready-for-human` tickets, tickets filed for triage), and waits. It never
   starts the next milestone on its own.

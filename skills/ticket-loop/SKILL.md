@@ -12,7 +12,7 @@ The **loop config**, `docs/agents/ticket-loop.md`, says how this project's ticke
 
 ## Steps
 
-0. **Setup.** With no loop config in the repo, run setup first, as [`SETUP.md`](SETUP.md) says: it grills the user and writes the config. Done when `docs/agents/ticket-loop.md` exists and is committed.
+0. **Setup.** With no loop config in the repo, run setup first, as [`SETUP.md`](SETUP.md) says. It grills the user, writes the config, and proves the loop closes ([`CLOSED-LOOP.md`](CLOSED-LOOP.md)). Done when `docs/agents/ticket-loop.md` is committed and every leg is closed, or M0's tickets are filed (a stop condition).
 
 1. **Frontier.** List the parent's open ready-for-agent tickets whose blockers are all closed, as the loop config's tracker says; the first in its order is next. State its number and title. Done when a ticket is chosen, or the frontier is empty (a stop condition).
 
@@ -21,6 +21,7 @@ Label every subagent you dispatch with its ticket first, then its role: `#85 imp
 2. **Implement.** Dispatch one implementer subagent (general-purpose, in the background, on the loop config's implementer model) with a brief that points at: the ticket; the loop config, CLAUDE.md and the agent docs; the reference the config names; the previous ticket's commit as a pattern. Its rules:
    - Build it with the Skill tool's `tdd`, at the seams the ticket names (it can't confirm seams with the user, so the ticket's are agreed).
    - Run the config's checks often. It doesn't run or playtest the app itself: that's the test queue's.
+   - If the test plan needs a test hook the app lacks (a way to reach a state, or to read a value), build the hook as part of the ticket, and add it to the config's Test queue list.
    - Commit locally with the ticket's closing keyword, staging only the files it changed for this ticket (never `git add -A`: the orchestrator may have edits of its own in the same tree); don't push.
    - File a ticket for any separate problem found, rather than fixing it out of scope.
    - **Decision protocol:** where the ticket and the reference disagree, follow the config's rule for who wins; where that leaves the owner a choice, or the ticket is unclear, stop and report the options with a recommendation; don't guess.
@@ -46,6 +47,7 @@ Stop, say why, and wait for the user when:
 
 - a decision is theirs (step 3 asks it, then carries on);
 - the parent's last ticket has shipped: the milestone is done. Write its summary where the config says, tell the user what shipped and what is left for them (ready-for-human tickets), and wait; never start the next milestone's tickets yourself, even when they're ready, and offer `/to-spec`, `/to-tickets` or `/grill-with-docs` if it has none;
+- setup found the loop open: M0's tickets are filed, and the user works them with you outside the loop;
 - the frontier is empty with tickets still open (all blocked, or ready-for-human): say what blocks them;
 - the next ticket is ready-for-human: tell them what it needs, and take the next ready-for-agent ticket if there is one;
 - something only they can do: a click in a running app, a device check, credentials, a stuck tool;

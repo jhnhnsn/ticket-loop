@@ -26,4 +26,13 @@ Done when the grilling's frontier is empty and the user confirms the answers.
 
 ## 3. Write it
 
-Write `docs/agents/ticket-loop.md` with one short section per question above, in that order, each the confirmed answer in a few lines: commands in backticks, files as paths, no rationale beyond a clause. Add a pointer line to CLAUDE.md's agent docs (`Ticket loop: see docs/agents/ticket-loop.md`). Commit both, then start the loop. To change the config later, edit the file; to redo it, delete it and run the loop again.
+Write `docs/agents/ticket-loop.md` with one short section per question above, in that order, each the confirmed answer in a few lines: commands in backticks, files as paths, no rationale beyond a clause. In the Test queue section, list the test hooks the app has. Add a pointer line to CLAUDE.md's agent docs (`Ticket loop: see docs/agents/ticket-loop.md`). Commit both. To change the config later, edit the file; to redo it, delete it and run the loop again.
+
+## 4. Prove the loop closes
+
+Prove each of the five legs (Check, Run, Drive, Ship, Record) by doing it, as [`CLOSED-LOOP.md`](CLOSED-LOOP.md) says.
+
+- **Every leg closed or not applicable:** start the loop.
+- **Any leg open:** file one ticket per open leg under an **M0 · Closed loop** parent, as `CLOSED-LOOP.md` says. Tell the user which legs are open and which tickets need them, then stop. The user works M0 with you in an ordinary session and runs the loop again once it's closed.
+
+Done when every leg is closed or not applicable, or M0's tickets are filed.
