@@ -16,6 +16,8 @@ The **loop config**, `docs/agents/ticket-loop.md`, says how this project's ticke
 
 1. **Frontier.** List the parent's open ready-for-agent tickets whose blockers are all closed, as the loop config's tracker says; the first in its order is next. State its number and title. Done when a ticket is chosen, or the frontier is empty (a stop condition).
 
+Label every subagent you dispatch with its ticket first, then its role: `#85 implement: wall grind`, `#85 standards review`, `#85 spec review`, so the agent list shows which ticket each one is on.
+
 2. **Implement.** Dispatch one implementer subagent (general-purpose, in the background, on the loop config's implementer model) with a brief that points at: the ticket; the loop config, CLAUDE.md and the agent docs; the reference the config names; the previous ticket's commit as a pattern. Its rules:
    - Build it with the Skill tool's `tdd`, at the seams the ticket names (it can't confirm seams with the user, so the ticket's are agreed).
    - Run the config's checks often. It doesn't run or playtest the app itself: that's the test queue's.
