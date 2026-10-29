@@ -32,10 +32,12 @@ and at the end of each milestone.
    tickets, labelled `ready-for-agent`, each saying what it blocks on. `/to-spec` and
    `/to-tickets` (Matt Pocock's) make them from a plan.
 
-5. **Run it** with the parent issue:
+5. **Run it** with the parent issue, or with the tickets you want shipped:
 
    ```
-   /ticket-loop:ticket-loop 120
+   /ticket-loop:ticket-loop 120        # every ticket under parent #120
+   /ticket-loop:ticket-loop 82         # just ticket #82
+   /ticket-loop:ticket-loop 82 84 85   # just these three
    ```
 
    The first run in a repo grills you before it starts (see [First run](#first-run)); after
@@ -88,7 +90,9 @@ building any test hook their test plan needs. See
 ## How each ticket goes
 
 1. **Frontier:** the next open `ready-for-agent` ticket under the parent whose blockers are all
-   closed, in the config's order.
+   closed, in the config's order. Run with tickets instead, it's the next one named, in the order
+   given; a named ticket that isn't `ready-for-agent`, or waits on an open ticket you didn't name,
+   is skipped and you're told why.
 2. **Implement:** a fresh implementer subagent builds it test-first at the seams the ticket
    names, runs the checks, commits locally (staging only its own files), and reports "ready to
    test" with a step-by-step **test plan** and the expected results.
@@ -108,6 +112,8 @@ building any test hook their test plan needs. See
 
 - A decision is yours (it asks, then carries on).
 - Setup found the loop open: M0's tickets are filed for you to close with Claude.
+- **The tickets you named have shipped** (or the rest were skipped, and it says why). It never
+  goes on to their siblings.
 - **The milestone is done:** it writes the milestone's summary, tells you what shipped and
   what's left for you (`ready-for-human` tickets, tickets filed for triage), and waits. It never
   starts the next milestone on its own.

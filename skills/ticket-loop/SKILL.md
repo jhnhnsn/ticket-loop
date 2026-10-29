@@ -1,12 +1,12 @@
 ---
 name: ticket-loop
-description: Work a parent issue's tickets one at a time to shipped (fresh implementer subagent, a test queue run in the main thread, independent two-axis review, push, publish), stopping only for the user's decisions.
+description: Work a parent issue's tickets, or just the tickets named, one at a time to shipped (fresh implementer subagent, a test queue run in the main thread, independent two-axis review, push, publish), stopping only for the user's decisions.
 disable-model-invocation: true
 ---
 
-Ship the tickets under a parent issue (a milestone or spec) one at a time, each built by a fresh **implementer subagent**, run or playtested by you from the **test queue** (in the main thread, where the user can watch), reviewed by fresh **reviewer subagents**, then pushed and published. You are the **orchestrator**: you hold the frontier, the user's decisions and the reports, never a ticket's working detail. Keep going ticket after ticket without asking whether to continue; stop only at a **stop condition** below.
+Ship the tickets under a parent issue (a milestone or spec), or just the tickets named, one at a time, each built by a fresh **implementer subagent**, run or playtested by you from the **test queue** (in the main thread, where the user can watch), reviewed by fresh **reviewer subagents**, then pushed and published. You are the **orchestrator**: you hold the frontier, the user's decisions and the reports, never a ticket's working detail. Keep going ticket after ticket without asking whether to continue; stop only at a **stop condition** below.
 
-The argument is the parent issue. With none, take the one the loop config says to work next, and say which.
+The argument is either a parent issue or one or more tickets (`/ticket-loop 120`, `/ticket-loop 82`, `/ticket-loop 82 84 85`). A single issue that holds tickets, as the loop config's tracker says a parent does, is a parent; any other issue is a ticket. Named tickets are all that run: the loop works those and stops, never their siblings. With no argument, take the parent the loop config says to work next, and say which.
 
 The **loop config**, `docs/agents/ticket-loop.md`, says how this project's tickets are found, built, tested, shipped and written up: the tracker, the checks command, the test queue, the reference to stay faithful to, the ship and changelog steps, the models per role. Every step below reads it. Communicate with subagents through **context pointers** (ticket numbers, the loop config, CLAUDE.md, earlier commits as patterns), not copies.
 
@@ -14,7 +14,7 @@ The **loop config**, `docs/agents/ticket-loop.md`, says how this project's ticke
 
 0. **Setup.** With no loop config in the repo, run setup first, as [`SETUP.md`](SETUP.md) says. It grills the user, writes the config, and proves the loop closes ([`CLOSED-LOOP.md`](CLOSED-LOOP.md)). Done when `docs/agents/ticket-loop.md` is committed and every leg is closed, or M0's tickets are filed (a stop condition).
 
-1. **Frontier.** List the parent's open ready-for-agent tickets whose blockers are all closed, as the loop config's tracker says; the first in its order is next. State its number and title. Done when a ticket is chosen, or the frontier is empty (a stop condition).
+1. **Frontier.** For a parent, list its open ready-for-agent tickets whose blockers are all closed, as the loop config's tracker says; the first in its order is next. For named tickets, the frontier is the ones not yet shipped, in the order given, except that a named ticket blocked by another named ticket waits for it; a named ticket that isn't ready-for-agent, or is blocked by an open ticket that wasn't named, is skipped with a word on why. State its number and title. Done when a ticket is chosen, or the frontier is empty (a stop condition).
 
 Label every subagent you dispatch with its ticket first, then its role: `#85 implement: wall grind`, `#85 standards review`, `#85 spec review`, so the agent list shows which ticket each one is on.
 
@@ -39,14 +39,15 @@ Label every subagent you dispatch with its ticket first, then its role: `#85 imp
 
 5. **Ship.** Add the ticket's entry to the changelog the config names, written as it says for its readers, commit it, push, then publish or deploy as the config says. Confirm the ticket closed. Done when all succeeded; a failure is a stop condition.
 
-6. **Report.** Tell the user in a few lines what shipped, any decision taken on their behalf, and tickets filed, then what's next. Back to step 1.
+6. **Report.** Tell the user in a few lines what shipped, any decision taken on their behalf, and tickets filed, then what's next. Back to step 1, unless that was the last ticket named.
 
 ## Stop conditions
 
 Stop, say why, and wait for the user when:
 
 - a decision is theirs (step 3 asks it, then carries on);
-- the parent's last ticket has shipped: the milestone is done. Write its summary where the config says, tell the user what shipped and what is left for them (ready-for-human tickets), and wait; never start the next milestone's tickets yourself, even when they're ready, and offer `/to-spec`, `/to-tickets` or `/grill-with-docs` if it has none;
+- the parent's last ticket has shipped (worked as a parent or ticket by ticket): the milestone is done. Write its summary where the config says, tell the user what shipped and what is left for them (ready-for-human tickets), and wait; never start the next milestone's tickets yourself, even when they're ready, and offer `/to-spec`, `/to-tickets` or `/grill-with-docs` if it has none;
+- the last named ticket has shipped, or the rest were skipped: say what shipped and what was skipped and why. If that finished the tickets' parent, the milestone stop above applies too;
 - setup found the loop open: M0's tickets are filed, and the user works them with you outside the loop;
 - the frontier is empty with tickets still open (all blocked, or ready-for-human): say what blocks them;
 - the next ticket is ready-for-human: tell them what it needs, and take the next ready-for-agent ticket if there is one;

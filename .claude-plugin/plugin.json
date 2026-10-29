@@ -1,8 +1,8 @@
 {
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "ticket-loop",
-  "version": "1.5.0",
-  "description": "Work a parent issue's tickets one at a time to shipped: a fresh implementer subagent per ticket, an independent two-axis review, push and publish, stopping only for your decisions.",
+  "version": "1.6.0",
+  "description": "Work a parent issue's tickets, or just the tickets named, one at a time to shipped: a fresh implementer subagent per ticket, an independent two-axis review, push and publish, stopping only for your decisions.",
   "author": {
     "name": "John Henson"
   },
