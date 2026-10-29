@@ -8,6 +8,8 @@ Ship the tickets under a parent (a milestone, or a spec or map issue), or just t
 
 The argument is either a parent or one or more tickets (`/ticket-loop 120`, `/ticket-loop v1`, `/ticket-loop 82`, `/ticket-loop 82 84 85`). A parent is whatever holds tickets in the loop config's tracker: an issue with sub-issues, or a milestone by name; any other issue is a ticket. Named tickets are all that run: the loop works those and stops, never their siblings. With no argument, take the parent the loop config says to work next, and say which.
 
+Matt Pocock's skills are named in full (`mattpocock-skills:tdd`), since a bare name can load another skill of the same name.
+
 The **loop config**, `docs/agents/ticket-loop.md`, says how this project's tickets are found, built, tested, shipped and written up: the tracker, the checks command, the test queue, the reference to stay faithful to, the ship and changelog steps, the models per role. Every step below reads it. Communicate with subagents through **context pointers** (ticket numbers, the loop config, CLAUDE.md, earlier commits as patterns), not copies.
 
 ## Steps
@@ -19,7 +21,7 @@ The **loop config**, `docs/agents/ticket-loop.md`, says how this project's ticke
 Label every subagent you dispatch with its ticket first, then its role: `#85 implement: wall grind`, `#85 standards review`, `#85 spec review`, so the agent list shows which ticket each one is on.
 
 2. **Implement.** Dispatch one implementer subagent (general-purpose, in the background, on the loop config's implementer model) with a brief that points at: the ticket; the loop config, CLAUDE.md and the agent docs; the reference the config names; the previous ticket's commit as a pattern. Its rules:
-   - Build it with the Skill tool's `tdd`, at the seams the ticket names (it can't confirm seams with the user, so the ticket's are agreed).
+   - Build it with the Skill tool's `mattpocock-skills:tdd`, at the seams the ticket names (it can't confirm seams with the user, so the ticket's are agreed).
    - Run the config's checks often. It doesn't run or playtest the app itself: that's the test queue's.
    - If the test plan needs a test hook the app lacks (a way to reach a state, or to read a value), build the hook as part of the ticket, and add it to the config's Test queue list.
    - Commit locally with the ticket's closing keyword, staging only the files it changed for this ticket (never `git add -A`: the orchestrator may have edits of its own in the same tree); don't push.
@@ -31,7 +33,7 @@ Label every subagent you dispatch with its ticket first, then its role: `#85 imp
 
 3. **Decide.** For a decision: ask the user (AskUserQuestion, recommendation first), record the answer on the ticket as a comment, then send it to the same subagent if it had done real work, or dispatch a fresh one from the updated ticket if it stopped early. Back to step 2's wait.
 
-4. **Test and review.** Put the ticket on the test queue, and while you work through it, dispatch two fresh reviewer subagents in parallel, as the `code-review` skill describes (Standards and Spec, each on the config's model for it), on the implementer's commit (its diff against the commit before it), so the review isn't anchored on the implementer's view.
+4. **Test and review.** Put the ticket on the test queue, and while you work through it, dispatch two fresh reviewer subagents in parallel, as the `mattpocock-skills:code-review` skill describes (Standards and Spec, each on the config's model for it; not Claude Code's built-in `code-review`, which is a different review), on the implementer's commit (its diff against the commit before it), so the review isn't anchored on the implementer's view.
    - **Test queue:** you run each test plan yourself, one ticket at a time, as the config says, saying what you're about to run so the user can watch, and undo any temporary test settings afterwards. Record what you measured against what the plan expected. A failure goes back to the implementer with what you saw.
    - Send the reviewers' findings to the implementer to fix: fix what's right, push back on what's wrong, and file tickets for anything pre-existing or out of scope. If the fixes change behaviour, re-run the affected steps of the test plan.
 

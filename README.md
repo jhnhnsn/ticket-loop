@@ -8,8 +8,9 @@ and at the end of each milestone.
 
 ## Getting started
 
-1. **Install Matt Pocock's skills**, which the loop builds on (`grilling`, `tdd`,
-   `code-review`):
+1. **Install Matt Pocock's skills**, which the loop builds on (`mattpocock-skills:grilling`,
+   `mattpocock-skills:tdd`, `mattpocock-skills:code-review`, called by their full names so
+   Claude Code's built-in `code-review` isn't loaded in their place):
 
    ```sh
    claude plugin install mattpocock-skills@claude-plugins-official

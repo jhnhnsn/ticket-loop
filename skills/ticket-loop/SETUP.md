@@ -8,7 +8,7 @@ Read what the repo already says: CLAUDE.md (or AGENTS.md), `docs/agents/*` (the 
 
 ## 2. Grill
 
-Call the Skill tool with `grilling`. The design tree's root questions are these, each asked with your drafted answer as the recommendation, so "yes" accepts it:
+Call the Skill tool with `mattpocock-skills:grilling`. The design tree's root questions are these, each asked with your drafted answer as the recommendation, so "yes" accepts it:
 
 1. **Tickets:** where they live; how a parent (milestone, spec, map issue) holds its tickets; how blocking is recorded; the labels for ready-for-agent and ready-for-human.
 2. **Order:** which parent to work, and the order inside it (the parent's order, ticket number, priority label).
