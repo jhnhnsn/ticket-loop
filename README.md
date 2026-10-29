@@ -28,14 +28,15 @@ and at the end of each milestone.
    live and what the triage labels are (`docs/agents/`), which answers the loop's first
    questions before they're asked.
 
-4. **Have tickets under a parent issue.** A milestone or spec issue whose sub-issues are the
-   tickets, labelled `ready-for-agent`, each saying what it blocks on. `/to-spec` and
+4. **Have tickets under a parent:** a milestone or spec issue whose sub-issues are the
+   tickets, or a tracker milestone holding them, labelled `ready-for-agent`, each saying what it blocks on. `/to-spec` and
    `/to-tickets` (Matt Pocock's) make them from a plan.
 
-5. **Run it** with the parent issue, or with the tickets you want shipped:
+5. **Run it** with the parent, or with the tickets you want shipped:
 
    ```
-   /ticket-loop:ticket-loop 120        # every ticket under parent #120
+   /ticket-loop:ticket-loop 120        # every ticket under parent issue #120
+   /ticket-loop:ticket-loop v1         # every ticket in milestone v1
    /ticket-loop:ticket-loop 82         # just ticket #82
    /ticket-loop:ticket-loop 82 84 85   # just these three
    ```
