@@ -104,8 +104,10 @@ building any test hook their test plan needs. See
 4. **Test and review:** Claude runs the test plan itself from the **test queue**, one ticket
    at a time in the main thread, saying what it's about to run so you can watch. Meanwhile two
    fresh reviewer subagents check the commit: **Standards** (the repo's conventions) and
-   **Spec** (the ticket and the reference, where real bugs turn up). Failures and findings go
-   back to the implementer, who fixes them in a follow-up commit carrying the playtest record.
+   **Spec** (the ticket and the reference, where real bugs turn up), once per ticket. Failures
+   and findings go back to the implementer, who fixes them all in one follow-up commit carrying
+   the playtest record. The fixes aren't reviewed again: Claude re-runs the checks and the
+   affected test steps, and anything found later becomes a new ticket, not another round.
 5. **Ship:** Claude adds the ticket's changelog entry, commits it, pushes, and publishes as the
    config says.
 6. **Report:** a few lines to you, then the next ticket.
