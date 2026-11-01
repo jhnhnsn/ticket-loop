@@ -76,13 +76,11 @@ Stop, say why, and wait for the user when:
 - Read diffs only to judge a report, never to redo the subagent's work; your context is the loop's memory across tickets.
 - While a subagent works in the tree, commit your own edits (docs, changelog) at once, so they never end up in its commit.
 
-## Dispatch mode (coordinators)
+## Coordinator dispatch
 
-This is how the **coordinator** (a subagent that runs the loop in place of the main thread, coming in #3) dispatches its implementer and reviewers. It doesn't change the steps above for the main thread. A background subagent is woken when its own background subagent finishes only if its session gives it an explicit hand-back (the SubagentHandback tool), so the coordinator picks its mode by session:
+When the loop runs as a subagent (a coordinator), pick how to dispatch by checking your own tools. This doesn't change the steps above when the loop runs in the main thread.
 
-- **Interactive** (`claude`, including `claude --bg`), where the coordinator has an explicit hand-back: dispatch the implementer and reviewers in the background and end your turn while they work, as step 2 says. Run the test queue alongside the reviews.
-- **Headless** (`claude -p`), where ending a turn counts as finishing: dispatch the implementer in the foreground and the two reviewers as parallel foreground calls in one message. Run the test queue before or after the reviews, not alongside them.
+- **SubagentHandback is among your tools** (interactive sessions, including `claude --bg`): dispatch the implementer and reviewers in the background, as the steps say, and run the test queue alongside the reviews. While you wait for a subagent, end your turn with plain text: its completion wakes you. Call SubagentHandback only for your final report. It ends your run, and any later call is refused. After the main thread resumes you with SendMessage, you can hand back again.
+- **No SubagentHandback** (headless `claude -p`): ending your turn ends your run, and nothing wakes you. Dispatch the implementer in the foreground and the two reviewers as parallel foreground calls in one message. Run the test queue before or after the reviews. Never send work to a subagent with SendMessage, because that resumes it in the background, where you can't wait for it. Send a decision's answer, a test failure or the review findings to a fresh foreground implementer instead, labelled as the first was, pointing at the ticket, its comments and the commit so far.
 
-Hand back explicitly only once, at your real hand-back. While you wait for a subagent, end your turn with plain text. An early SubagentHandback is delivered as your only report, and a later one is refused.
-
-Settled by a trial on Claude Code 2.1.316 (#2), three levels deep (main → background coordinator → background child that sleeps, then reports a word). Headless: not woken. The coordinator finished with its waiting text, and the child's word went to the main thread. Interactive and `--bg`: woken, and the coordinator reported the child's word. Foreground fallback: works, and two foreground children in one message ran in parallel. Re-check when Claude Code changes how subagents hand back.
+Verified on Claude Code 2.1.316; see [ADR-0001](../../docs/adr/0001-coordinator-dispatch-by-session.md).
