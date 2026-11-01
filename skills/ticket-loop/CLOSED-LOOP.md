@@ -1,6 +1,6 @@
 # The closed loop
 
-The loop runs unattended only if every ticket's cycle **closes**: you can take a commit from checked to shipped and recorded with no human in it. A cycle is five **legs**. Each one closes when you can do it alone, from the terminal or an MCP, and read its result as pass or fail.
+The loop runs unattended only if every ticket's cycle **closes**: you can take a commit from checked to shipped and recorded with no human in it. A cycle is five **legs**, and running it unattended needs a sixth, **Cap**, so the loop knows when to stop and ask. Each one closes when you can do it alone, from the terminal or an MCP, and read its result as pass or fail.
 
 | Leg | Closes when | The config section |
 | --- | --- | --- |
@@ -9,8 +9,9 @@ The loop runs unattended only if every ticket's cycle **closes**: you can take a
 | **Drive** | you can operate the running app and read its state through a tool (an MCP, a browser driver, adb, a CLI, an HTTP API), and put it into a test's situation through **test hooks** (debug settings, seeded data, a test-only command) instead of by hand | Test queue |
 | **Ship** | one command pushes and publishes or deploys, with no prompt; any secret reaches only that step (envstow's `run --only`, say) | Ship |
 | **Record** | the changelog's file, section and entry format are settled, so an entry is a commit you make | Changelog |
+| **Cap** | tokencount reports how much of the week's plan usage today has taken (`today.percent_of_week`), live | Daily cap |
 
-A leg can be **not applicable**: a library has no Run or Drive (Check closes its cycle), and an unpublished tool has no Ship. Record that in the config with the reason, so it isn't mistaken for a gap.
+A leg can be **not applicable**: a library has no Run or Drive (Check closes its cycle), an unpublished tool has no Ship, and an API key has no plan usage for Cap to read. Record that in the config with the reason, so it isn't mistaken for a gap.
 
 ## Proving it
 
@@ -20,6 +21,7 @@ Setup proves each leg by doing it, never by reading about it:
 - **Run and Drive:** start the app, drive one trivial thing through the tool, and read a value back, as a test plan would. Then set one test hook and see it take effect.
 - **Ship:** run the ship command's dry run if it has one. Without one, confirm each step it runs can go unattended: the remote push works, the secrets are listed in the store (`envstow list`), and nothing prompts. Never publish just to prove the leg.
 - **Record:** the changelog file exists with the settled section.
+- **Cap:** run `tokencount:tokencount`'s `--json` report. Its `usage_source` is `live` and `today.percent_of_week` is a number. Not installed is open and `ready-for-human`.
 
 A leg that can't be proven is **open**.
 

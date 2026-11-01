@@ -21,6 +21,7 @@ Call the Skill tool with `mattpocock-skills:grilling`. The design tree's root qu
 9. **Models:** the model per role. Recommend Opus for the implementer and the Spec reviewer and Sonnet for the Standards reviewer; Sonnet implementers are faster, but missed a reference detail in a trial.
 10. **Commits:** the message style, closing keyword and attribution lines; one commit per ticket plus its fix commit.
 11. **Concurrency:** one ticket at a time, or implementers in parallel worktrees (only when nothing they test shares one running resource).
+12. **Daily cap:** the share of the plan's weekly usage one day may take before the loop stops to ask. Recommend one day's share, 14.3% (100 ÷ 7). Not applicable without plan usage to read (an API key rather than a Pro, Max or Ultra plan). The loop reads today's use with the tokencount plugin (1.1.0 or later); if it isn't installed, say how (`claude plugin marketplace add jhnhnsn/tokencount`, `claude plugin install tokencount@tokencount`, then a restart).
 
 Done when the grilling's frontier is empty and the user confirms the answers.
 
@@ -30,7 +31,7 @@ Write `docs/agents/ticket-loop.md` with one short section per question above, in
 
 ## 4. Prove the loop closes
 
-Prove each of the five legs (Check, Run, Drive, Ship, Record) by doing it, as [`CLOSED-LOOP.md`](CLOSED-LOOP.md) says.
+Prove each of the six legs (Check, Run, Drive, Ship, Record, Cap) by doing it, as [`CLOSED-LOOP.md`](CLOSED-LOOP.md) says.
 
 - **Every leg closed or not applicable:** start the loop.
 - **Any leg open:** file one ticket per open leg under an **M0 · Closed loop** parent, as `CLOSED-LOOP.md` says. Tell the user which legs are open and which tickets need them, then stop. The user works M0 with you in an ordinary session and runs the loop again once it's closed.

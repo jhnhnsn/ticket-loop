@@ -25,6 +25,15 @@ and at the end of each milestone.
 
    Restart Claude Code so the new skill is listed.
 
+   For the [daily cap](#when-it-stops), also install
+   [tokencount](https://github.com/jhnhnsn/tokencount) (1.1.0 or later, on a Pro or Max plan),
+   which reports how much of your plan's week today has used:
+
+   ```sh
+   claude plugin marketplace add jhnhnsn/tokencount
+   claude plugin install tokencount@tokencount
+   ```
+
 3. **Optional: run `/setup-matt-pocock-skills`** in your project. It records where tickets
    live and what the triage labels are (`docs/agents/`), which answers the loop's first
    questions before they're asked.
@@ -70,6 +79,7 @@ question carrying its drafted answer so "yes" accepts it:
 | Models | the model for the implementer, the Standards reviewer and the Spec reviewer |
 | Commits | message style, closing keyword, attribution lines |
 | Concurrency | one ticket at a time, or parallel worktrees |
+| Daily cap | the share of your plan's weekly usage one day may take (one day's share, 14.3%, by default) |
 
 The answers go to **`docs/agents/ticket-loop.md`**, the loop config, with a pointer line in
 CLAUDE.md; both are committed. Every later run reads it. Edit it to change an answer, or delete
@@ -82,6 +92,7 @@ Then setup **proves the loop closes** by doing each leg of one ticket's cycle it
 - **Drive:** a tool operates the app and reads its state, and a test hook takes effect.
 - **Ship:** pushing and publishing need no prompt.
 - **Record:** the changelog is in place.
+- **Cap:** tokencount reports how much of the week today has used.
 
 Each leg that can't be proven becomes a ticket under an **M0 · Closed loop** parent. The loop
 then stops, and you close M0 with Claude in an ordinary session before running it again: the
@@ -125,6 +136,9 @@ building any test hook their test plan needs. See
 - Something needs you in person: a click in a running app, a device check, credentials, a stuck
   tool.
 - A push, publish or check fails in a way a fix can't safely cover.
+- **The daily cap is reached.** Before each dispatch and each ship, the loop checks how much of
+  your plan's weekly usage today has taken. At the cap, or if it can't tell, it asks you: stop
+  here, finish this ticket (or one more), or keep going today. Only your answer lifts the cap.
 - Anything else your config lists.
 
 ## Models

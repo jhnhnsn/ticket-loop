@@ -43,6 +43,18 @@ The **loop config**, `docs/agents/ticket-loop.md`, says how this project's ticke
 
 6. **Report.** Tell the user in a few lines what shipped, any decision taken on their behalf, and tickets filed, then what's next. Back to step 1, unless that was the last ticket named.
 
+## Daily cap
+
+The loop never goes past the user's **daily cap** (the share of their plan's weekly usage one day may take, from the loop config) unless the user says to, at the cap. Check the cap before every subagent dispatch and before every ship, with the Skill tool's `tokencount:tokencount` (the tokencount plugin): its `--json` report's `today.percent_of_week` is how much of the plan's weekly usage today has taken so far. Don't set tokencount's guard for this: it blocks every session on the account, where the cap only pauses the loop to ask.
+
+- **Under the cap:** carry on.
+- **At or over the cap, or unreadable** (tokencount isn't installed, its `usage_source` is `unavailable`, or `today.percent_of_week` is null): dispatch nothing and ship nothing. Ask the user (AskUserQuestion) with today's use and the cap, which ticket is in hand, and where it stands:
+  - **Stop here** (recommended): stop with the ticket in hand as it is. Say what's committed locally; a later run picks it up.
+  - **Finish this ticket**, or **One more ticket** at a ticket boundary: carry on to ship it, then ask again.
+  - **Keep going today:** no more cap questions until the date changes.
+
+The answer at the cap is the only override; nothing else lifts it, and a restart asks again. A loop config written before the cap existed has no Daily cap section: before the first ticket, ask setup's Daily cap question alone, prove the Cap leg, and add the answer to the config. If the config marks the cap not applicable (no plan usage to read, as with an API key), skip the check.
+
 ## Stop conditions
 
 Stop, say why, and wait for the user when:
@@ -55,6 +67,7 @@ Stop, say why, and wait for the user when:
 - the next ticket is ready-for-human: tell them what it needs, and take the next ready-for-agent ticket if there is one;
 - something only they can do: a click in a running app, a device check, credentials, a stuck tool;
 - a push, publish or check fails in a way a fix can't safely cover;
+- the daily cap is reached, or can't be read, and the user says to stop (see Daily cap);
 - anything else the config lists as a stop.
 
 ## Constraints
