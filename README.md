@@ -1,10 +1,11 @@
 # ticket-loop
 
-A Claude Code plugin that ships a milestone's tickets one at a time, without check-ins. Claude
-orchestrates: each ticket is built by a fresh implementer subagent (so every ticket starts with
-a clear context), tested by Claude in the main thread where you can watch, reviewed by two fresh
-reviewer subagents, then pushed, published and written up. It stops only when it needs you,
-and at the end of each milestone.
+A Claude Code plugin that ships a milestone's tickets one at a time, without check-ins. Your
+main thread hands the run to a background **coordinator** subagent and stays free for you. The
+coordinator works the tickets: each is built by a fresh implementer subagent (so every ticket
+starts with a clear context), tested by the coordinator, reviewed by two fresh reviewer
+subagents, then pushed, published and written up. It stops only when it needs you, and at the
+end of each milestone.
 
 ## Getting started
 
@@ -54,10 +55,13 @@ and at the end of each milestone.
    The first run in a repo grills you before it starts (see [First run](#first-run)); after
    that it goes straight to the first ticket.
 
-6. **Let it work.** It reports after each ticket in a few lines: what shipped, any decision
-   taken on your behalf, tickets filed, what's next. Ask "how's the agent doing?" at any time.
-   Push and publish commands ask permission unless your settings allow them; allow them to
-   keep the loop unattended.
+6. **Let it work.** The coordinator runs in the background, labelled with what it runs
+   (`ticket-loop: #82 coordinator 1`), and your main thread is free for other work meanwhile.
+   When it stops, the main thread shows its report for each ticket in a few lines: what
+   shipped, any decision taken on your behalf, tickets filed, what's next. Ask "how's the agent
+   doing?" in the main thread at any time. Push and publish commands ask permission in your
+   main session, naming the agent, unless your settings allow them; allow them to keep the loop
+   unattended.
 
 ## First run
 
@@ -76,7 +80,7 @@ question carrying its drafted answer so "yes" accepts it:
 | Ship | the branch to push, the publish or deploy command, per ticket or per milestone |
 | Changelog | where each shipped ticket's entry goes, who reads it, what it says, its order and links, where milestone summaries go, whether upcoming milestones are listed |
 | Stops | anything beyond the built-in stops |
-| Models | the model for the implementer, the Standards reviewer and the Spec reviewer |
+| Models | the model for the coordinator, the implementer, the Standards reviewer and the Spec reviewer |
 | Commits | message style, closing keyword, attribution lines |
 | Concurrency | one ticket at a time, or parallel worktrees |
 | Daily cap | the share of your plan's weekly usage one day may take (one day's share, 14.3%, by default) |
@@ -102,6 +106,14 @@ building any test hook their test plan needs. See
 
 ## How each ticket goes
 
+The loop has two roles. The **launcher** is the skill in your main thread: it runs setup when
+there's no config, works out the argument (a bad one fails there, in front of you), starts the
+coordinator, and shows you what it hands back. The **coordinator** is a subagent shipped with
+the plugin (`ticket-loop:coordinator`, on the config's coordinator model): it takes each ticket
+through these steps, dispatching the implementer and reviewers as subagents of its own, each
+labelled with its ticket first (`#82 implement: greet option`, `#82 spec review`). That's two
+levels of subagents, within Claude Code's default nesting limit.
+
 1. **Frontier:** the next open `ready-for-agent` ticket under the parent whose blockers are all
    closed, in the config's order. Run with tickets instead, it's the next one named, in the order
    given; a named ticket that isn't `ready-for-agent`, or waits on an open ticket you didn't name,
@@ -110,22 +122,27 @@ building any test hook their test plan needs. See
    names, runs the checks, commits locally (staging only its own files), and reports "ready to
    test" with a step-by-step **test plan** and the expected results.
 3. **Decide:** where the ticket and the reference disagree, the config's rule settles it.
-   Anything still yours comes to you as a question with a recommendation; your answer is
-   recorded on the ticket as a comment and goes back to the same subagent.
-4. **Test and review:** Claude runs the test plan itself from the **test queue**, one ticket
-   at a time in the main thread, saying what it's about to run so you can watch. Meanwhile two
-   fresh reviewer subagents check the commit: **Standards** (the repo's conventions) and
-   **Spec** (the ticket and the reference, where real bugs turn up), once per ticket. Failures
-   and findings go back to the implementer, who fixes them all in one follow-up commit carrying
-   the playtest record. The fixes aren't reviewed again: Claude re-runs the checks and the
-   affected test steps, and anything found later becomes a new ticket, not another round.
-5. **Ship:** Claude adds the ticket's changelog entry, commits it, pushes, and publishes as the
-   config says.
-6. **Report:** a few lines to you, then the next ticket.
+   Anything still yours stops the run and comes to you in the main thread with the options and
+   a recommendation; your answer is recorded on the ticket as a comment, and running the same
+   command again carries on.
+4. **Test and review:** the coordinator runs the test plan itself from the **test queue**, one
+   ticket at a time, saying what it's about to run. To watch, open the coordinator's
+   transcript in the agent view. Meanwhile two fresh reviewer subagents check the commit:
+   **Standards** (the repo's conventions) and **Spec** (the ticket and the reference, where
+   real bugs turn up), once per ticket. Failures and findings go back to the implementer, who
+   fixes them all in one follow-up commit carrying the playtest record. The fixes aren't
+   reviewed again: the coordinator re-runs the checks and the affected test steps, and anything
+   found later becomes a new ticket, not another round.
+5. **Ship:** the coordinator adds the ticket's changelog entry, commits it, pushes, and
+   publishes as the config says.
+6. **Report:** a few lines for its hand-back, then the next ticket.
 
 ## When it stops
 
-- A decision is yours (it asks, then carries on).
+The coordinator hands back to the main thread, which shows you why it stopped and its report
+for each ticket it worked.
+
+- A decision is yours: you get the question with a recommendation.
 - Setup found the loop open: M0's tickets are filed for you to close with Claude.
 - **The tickets you named have shipped** (or the rest were skipped, and it says why). It never
   goes on to their siblings.
@@ -137,22 +154,29 @@ building any test hook their test plan needs. See
   tool.
 - A push, publish or check fails in a way a fix can't safely cover.
 - **The daily cap is reached.** Before each dispatch and each ship, the loop checks how much of
-  your plan's weekly usage today has taken. At the cap, or if it can't tell, it asks you: stop
-  here, finish this ticket (or one more), or keep going today. Only your answer lifts the cap.
+  your plan's weekly usage today has taken. At the cap, or if it can't tell, it stops before
+  dispatching or shipping anything, and tells you today's use and where the ticket in hand
+  stands.
 - Anything else your config lists.
 
 ## Models
 
-Each role's model comes from the config. The default suggestion, from a trial where Opus and
-Sonnet implemented the same ticket side by side: **Opus for the implementer and the Spec
-reviewer, Sonnet for the Standards reviewer.** Sonnet's implementer was about 40% faster but
+Each role's model comes from the config: the coordinator, the implementer and the two
+reviewers. A config without a coordinator model runs it on the implementer's. The default
+suggestion, from a trial where Opus and Sonnet implemented the same ticket side by side: **Opus
+for the implementer and the Spec reviewer, Sonnet for the Standards reviewer.** Sonnet's implementer was about 40% faster but
 missed a detail in the reference source that Opus got right; the Spec reviewer caught it, which
 is why that review stays on the stronger model.
 
 ## Tips
 
-- **Shared tree:** Claude commits its own edits (changelog, docs) at once, so they never end up
-  in an implementer's commit.
+- **Shared tree:** the coordinator commits its own edits (changelog, milestone summary) at
+  once, so they never end up in an implementer's commit.
+- **Side work during a run:** the main thread is yours, but it shares the working tree with the
+  coordinator. Code edits you make there while a run is going are visible to its test runs, and
+  can break a test or end up in the wrong commit. For code investigations during a run, use a
+  worktree (`claude --worktree`, or `git worktree add`).
+- **Stopping:** stop the coordinator in the agent list to stop the loop.
 - **One running app:** tickets that share one app session, simulator or game engine go one at a
   time; parallel worktrees only pay off when nothing they test is shared. Wider concurrency is
   `/implement-spec`'s job.

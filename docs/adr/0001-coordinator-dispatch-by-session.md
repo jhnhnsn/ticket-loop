@@ -1,6 +1,6 @@
 # Coordinators pick their dispatch mode by session
 
-A coordinator (the loop run as a background subagent, spec #1) has to wait for its implementer and reviewers. A trial (#2, Claude Code 2.1.316) found that whether a background subagent is woken when its own background subagent finishes depends on the session. So the owner chose to have coordinators decide by session: background dispatch where they're woken, foreground dispatch where they aren't. The rule is in the skill's "Coordinator dispatch" section.
+A coordinator (the loop run as a background subagent, spec #1) has to wait for its implementer and reviewers. A trial (#2, Claude Code 2.1.316) found that whether a background subagent is woken when its own background subagent finishes depends on the session. So the owner chose to have coordinators decide by session: background dispatch where they're woken, foreground dispatch where they aren't. The rule is in the coordinator's definition, `agents/coordinator.md`, under "Dispatch".
 
 ## What the trial observed
 
@@ -17,6 +17,6 @@ We observed that being woken goes with having SubagentHandback. We didn't prove 
 
 ## Consequences
 
-- The coordinator's agent definition (#3) must not hide SubagentHandback in interactive sessions. Whether a `tools` list in the agent frontmatter can remove it is untested, so check the agent's tools when building it.
+- The coordinator's agent definition (#3) must not hide SubagentHandback in interactive sessions. Whether a `tools` list in the agent frontmatter can remove it is untested, so the definition sets no `tools` or `disallowedTools` and inherits every tool a subagent gets.
 - Headless test-queue runs in the sandbox exercise only the foreground path. The background path needs an interactive or `claude --bg` run.
 - Re-run the trial when Claude Code changes how subagents hand back. Ask the main thread to dispatch a background coordinator. The coordinator dispatches a background child (`date +%T; sleep 20; date +%T`, then a word), ends its turn with "COORDINATOR WAITING", and reports "COORDINATOR WOKEN: <word>" if woken. Run it headless from the sandbox with `--allowedTools "Agent Bash(sleep:*) Bash(date:*) SendMessage"`, prompt first and stdin closed.
