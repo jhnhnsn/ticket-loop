@@ -5,7 +5,7 @@ main thread hands the run to a background **coordinator** subagent and stays fre
 coordinator works the tickets: each is built by a fresh implementer subagent (so every ticket
 starts with a clear context), tested by the coordinator, reviewed by two fresh reviewer
 subagents, then pushed, published and written up. It asks you only for decisions that are
-yours, and stops only when it needs you, and at the end of each milestone.
+yours, and stops only when it needs you and at the end of each milestone.
 
 ## Getting started
 
@@ -57,8 +57,7 @@ yours, and stops only when it needs you, and at the end of each milestone.
 
 6. **Let it work.** The coordinator runs in the background, labelled with what it runs
    (`ticket-loop: #82 coordinator 1`), and your main thread is free for other work meanwhile.
-   A decision that's yours comes to you there as a question, and the run carries on with your
-   answer. When it stops, the main thread shows its report for each ticket in a few lines: what
+   When it stops, the main thread shows its report for each ticket in a few lines: what
    shipped, the decisions you answered and any taken on your behalf, tickets filed, what's
    next. Ask "how's the agent doing?" in the main thread at any time. Push and publish commands
    ask permission in your main session, naming the agent, unless your settings allow them;
@@ -144,7 +143,7 @@ levels of subagents, within Claude Code's default nesting limit.
 ## When it stops
 
 The coordinator hands back to the main thread, which shows you why it stopped and its report
-for each ticket it worked. A decision of yours isn't a stop: it's asked, and the run carries on.
+for each ticket it worked.
 
 - Setup found the loop open: M0's tickets are filed for you to close with Claude.
 - **The tickets you named have shipped** (or the rest were skipped, and it says why). It never
