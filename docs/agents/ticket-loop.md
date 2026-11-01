@@ -18,9 +18,9 @@ Next is the first open sub-issue, in the parent's sub-issue order, whose blocker
 
 The app is the plugin itself. A ticket is tested by a real loop run of the working copy in the **sandbox**: `jhnhnsn/ticket-loop-sandbox` (private), cloned at `~/github/ticket-loop-sandbox`, with a tiny app and its own ready-made loop config (Sonnet on every role, so test runs stay cheap).
 
-- **Run:** from the sandbox, `claude -p --plugin-dir ~/github/ticket-loop --model sonnet --output-format stream-json --verbose "/ticket-loop:ticket-loop <args>"`, with the tools the loop needs allowed (see the sandbox's README). Ready when the stream's first message arrives.
+- **Run:** from the sandbox, the headless command in the sandbox's README (`claude -p "/ticket-loop:ticket-loop <args>" --plugin-dir ~/github/ticket-loop …`, prompt first, stdin closed). Ready when the stream's first message arrives. It loads the working copy in place of the installed plugin.
 - **Read:** the stream-json output (Agent dispatches and their `description` labels, AskUserQuestion calls, the final report), the sandbox tracker (`gh issue view`, comments, closures) and the sandbox's `git log`.
-- **Interactive:** steps that need a question answered (decisions, the daily cap) run in an interactive `claude --plugin-dir ~/github/ticket-loop` session in the sandbox, which the user drives from a test plan, unless the headless run can ask (see Test hooks).
+- **Interactive:** steps that need a question answered (decisions, the daily cap) run in an interactive `claude --plugin-dir ~/github/ticket-loop` session in the sandbox, which the user drives from a test plan: AskUserQuestion isn't available headless (proven at setup).
 - **Test plan measures:** labels in the agent list, what reaches the main thread, tracker state, commits, and that the main session stays free.
 - **Clean up after each test:** close its dummy tickets and parent, reset the sandbox's `main` to its starting commit (`git push --force-with-lease` on the sandbox only), and undo any config change the test made.
 
