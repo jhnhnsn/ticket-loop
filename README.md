@@ -4,8 +4,8 @@ A Claude Code plugin that ships a milestone's tickets one at a time, without che
 main thread hands the run to a background **coordinator** subagent and stays free for you. The
 coordinator works the tickets: each is built by a fresh implementer subagent (so every ticket
 starts with a clear context), tested by the coordinator, reviewed by two fresh reviewer
-subagents, then pushed, published and written up. It stops only when it needs you, and at the
-end of each milestone.
+subagents, then pushed, published and written up. It asks you only for decisions that are
+yours, and stops only when it needs you, and at the end of each milestone.
 
 ## Getting started
 
@@ -57,11 +57,12 @@ end of each milestone.
 
 6. **Let it work.** The coordinator runs in the background, labelled with what it runs
    (`ticket-loop: #82 coordinator 1`), and your main thread is free for other work meanwhile.
-   When it stops, the main thread shows its report for each ticket in a few lines: what
-   shipped, any decision taken on your behalf, tickets filed, what's next. Ask "how's the agent
-   doing?" in the main thread at any time. Push and publish commands ask permission in your
-   main session, naming the agent, unless your settings allow them; allow them to keep the loop
-   unattended.
+   A decision that's yours comes to you there as a question, and the run carries on with your
+   answer. When it stops, the main thread shows its report for each ticket in a few lines: what
+   shipped, the decisions you answered and any taken on your behalf, tickets filed, what's
+   next. Ask "how's the agent doing?" in the main thread at any time. Push and publish commands
+   ask permission in your main session, naming the agent, unless your settings allow them;
+   allow them to keep the loop unattended.
 
 ## First run
 
@@ -122,9 +123,12 @@ levels of subagents, within Claude Code's default nesting limit.
    names, runs the checks, commits locally (staging only its own files), and reports "ready to
    test" with a step-by-step **test plan** and the expected results.
 3. **Decide:** where the ticket and the reference disagree, the config's rule settles it.
-   Anything still yours stops the run and comes to you in the main thread with the options and
-   a recommendation; your answer is recorded on the ticket as a comment, and running the same
-   command again carries on.
+   Anything still yours comes to you in the main thread as a question with the options and a
+   recommendation, while the coordinator waits. Your answer is recorded on the ticket as a
+   comment and goes back to the same coordinator, which passes it to the implementer and
+   carries on with the ticket; its report says which way you decided. (A headless `claude -p`
+   run can't ask, so there the question ends the run: answer on the ticket and run the same
+   command again.)
 4. **Test and review:** the coordinator runs the test plan itself from the **test queue**, one
    ticket at a time, saying what it's about to run. To watch, open the coordinator's
    transcript in the agent view. Meanwhile two fresh reviewer subagents check the commit:
@@ -140,9 +144,8 @@ levels of subagents, within Claude Code's default nesting limit.
 ## When it stops
 
 The coordinator hands back to the main thread, which shows you why it stopped and its report
-for each ticket it worked.
+for each ticket it worked. A decision of yours isn't a stop: it's asked, and the run carries on.
 
-- A decision is yours: you get the question with a recommendation.
 - Setup found the loop open: M0's tickets are filed for you to close with Claude.
 - **The tickets you named have shipped** (or the rest were skipped, and it says why). It never
   goes on to their siblings.

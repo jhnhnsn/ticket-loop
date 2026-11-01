@@ -1,13 +1,13 @@
 ---
 name: ticket-loop
-description: Work a parent issue's tickets, or just the tickets named, one at a time to shipped, in a background coordinator subagent so the main thread stays free (fresh implementer subagent, a test queue run by the coordinator, independent two-axis review, push, publish), stopping only for the user's decisions.
+description: Work a parent issue's tickets, or just the tickets named, one at a time to shipped, in a background coordinator subagent so the main thread stays free (fresh implementer subagent, a test queue run by the coordinator, independent two-axis review, push, publish), asking the user only for their decisions, from the main thread.
 disable-model-invocation: true
 ---
 
 Ship the tickets under a parent (a milestone, or a spec or map issue), or just the tickets named, one at a time, each built by a fresh implementer subagent, tested from the test queue, reviewed by fresh reviewer subagents, then pushed and published. The loop runs in two roles:
 
-- You are the **launcher**, in the main thread: setup, resolving the argument, dispatching the coordinator, and showing the user what it hands back. You keep no ticket's working detail, and the main thread stays free for the user while the loop runs.
-- The **coordinator** is this plugin's `ticket-loop:coordinator` agent, a subagent that runs the loop: frontier, implement, test queue, review, ship, report, ticket after ticket, dispatching implementer and reviewer subagents of its own. It ends by handing back a **stop condition** with its per-ticket reports. Its steps are in its definition, [`agents/coordinator.md`](../../agents/coordinator.md).
+- You are the **launcher**, in the main thread: setup, resolving the argument, dispatching the coordinator, asking the user its decisions, and showing the user what it hands back. You keep no ticket's working detail, and the main thread stays free for the user while the loop runs.
+- The **coordinator** is this plugin's `ticket-loop:coordinator` agent, a subagent that runs the loop: frontier, implement, test queue, review, ship, report, ticket after ticket, dispatching implementer and reviewer subagents of its own. It hands back either **decision needed** (a decision that's the user's: you ask it, then resume the coordinator with the answer) or a **stop condition**, which ends the run; both carry its per-ticket reports. Its steps are in its definition, [`agents/coordinator.md`](../../agents/coordinator.md).
 
 The argument is either a parent or one or more tickets (`/ticket-loop 120`, `/ticket-loop v1`, `/ticket-loop 82`, `/ticket-loop 82 84 85`). A parent is whatever holds tickets in the loop config's tracker: an issue with sub-issues, or a milestone by name; any other issue is a ticket.
 
@@ -23,8 +23,11 @@ The **loop config**, `docs/agents/ticket-loop.md`, says how this project's ticke
 
 3. **While it runs**, the main thread is the user's: answer what they ask as usual. The coordinator's tests and commits see the working tree, so code edits during a run belong in a worktree: make none yourself for the loop, and if the user asks for some, suggest a worktree. Asked "how's the agent doing?", answer from the coordinator's latest state without disturbing it: the tail of its transcript (the output file its dispatch named), the tracker and `git log`. Don't send it a message for this.
 
-4. **Show the hand-back.** Show the user each ticket's report (what shipped, any decision taken on their behalf, tickets filed) and the stop condition, with what they need to know or do, then what's next. Keep none of the coordinator's working detail. The run ends here:
-   - **A decision that's theirs:** give the ticket, the options and the recommendation, recommendation first. When they answer, record it on the ticket as a comment; running the same command again carries on from the ticket.
+4. **Show the hand-back.** Show the user each ticket's report it carries (what shipped, decisions they answered and any taken on their behalf, tickets filed). Keep none of the coordinator's working detail.
+
+5. **Relay a decision.** When the hand-back is **decision needed**, ask the user with AskUserQuestion: the ticket in the question, the options with the recommendation first (marked as recommended). Record their answer on the ticket as a comment, as the config's tracker says. Then resume the same coordinator with SendMessage, to the agent ID its dispatch returned, with the answer and a pointer to the comment, and end your turn: its next hand-back wakes you, and you go back to step 4. Don't dispatch a new coordinator for this. Without AskUserQuestion (a headless run), treat it as a stop instead: give the ticket, the options and the recommendation, recommendation first; the user records their answer on the ticket, and running the same command again carries on from it.
+
+6. **Show the stop.** When the hand-back is a **stop condition**, show it, with what the user needs to know or do, then what's next. The run ends here:
    - **The daily cap:** give today's use, the cap, and the ticket in hand and where it stands. To go on today, the user raises the cap in the loop config; otherwise the run waits for tomorrow.
    - Anything else: as the coordinator said it.
 

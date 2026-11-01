@@ -17,7 +17,7 @@ Call the Skill tool with `mattpocock-skills:grilling`. The design tree's root qu
 5. **Reference:** an upstream or spec the work must stay faithful to; who wins when a ticket and the reference disagree; which forks still go to the user.
 6. **Ship:** the branch to push; the publish or deploy command, if any; whether every ticket ships on its own or a milestone ships at once.
 7. **Changelog:** where each shipped ticket's entry goes (file and section), who reads it (players, users, developers), what an entry says (what someone can now try, or what changed), its order (oldest first or newest first), its links; where a finished milestone's summary goes; whether milestones still to come are listed.
-8. **Stops:** besides the built-in ones (a user decision, the end of each milestone, a failed ship), anything else the loop should stop for.
+8. **Stops:** besides the built-in ones (the end of each milestone, a failed ship, something only the user can do), anything else the loop should stop for.
 9. **Models:** the model per role: the coordinator (which runs the loop), the implementer, the Standards reviewer and the Spec reviewer. Recommend Opus for the implementer and the Spec reviewer and Sonnet for the Standards reviewer; Sonnet implementers are faster, but missed a reference detail in a trial. Recommend the implementer's model for the coordinator, which is what a config without one uses.
 10. **Commits:** the message style, closing keyword and attribution lines; one commit per ticket plus its fix commit.
 11. **Concurrency:** one ticket at a time, or implementers in parallel worktrees (only when nothing they test shares one running resource).
