@@ -156,7 +156,7 @@ for each ticket it worked.
 - **The daily cap is reached.** Before each dispatch and each ship, the loop checks how much of
   your plan's weekly usage today has taken. At the cap, or if it can't tell, it stops before
   dispatching or shipping anything, and tells you today's use and where the ticket in hand
-  stands.
+  stands. To go on today, raise the cap in the loop config; otherwise run it again tomorrow.
 - Anything else your config lists.
 
 ## Models
@@ -174,8 +174,8 @@ is why that review stays on the stronger model.
   once, so they never end up in an implementer's commit.
 - **Side work during a run:** the main thread is yours, but it shares the working tree with the
   coordinator. Code edits you make there while a run is going are visible to its test runs, and
-  can break a test or end up in the wrong commit. For code investigations during a run, use a
-  worktree (`claude --worktree`, or `git worktree add`).
+  can break a test. For code investigations during a run, use a worktree (`claude --worktree`,
+  or `git worktree add`).
 - **Stopping:** stop the coordinator in the agent list to stop the loop.
 - **One running app:** tickets that share one app session, simulator or game engine go one at a
   time; parallel worktrees only pay off when nothing they test is shared. Wider concurrency is
