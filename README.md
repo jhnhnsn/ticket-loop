@@ -57,6 +57,10 @@ yours, and stops only when it needs you and at the end of each milestone.
 
 6. **Let it work.** The coordinator runs in the background, labelled with what it runs
    (`ticket-loop: #82 coordinator 1`), and your main thread is free for other work meanwhile.
+   Before it starts, the main thread says how big the run is (`M1: 7 ready, about 2
+   coordinators.`). Each coordinator ships at most the config's **ticket budget** (4 by
+   default), or fewer if a ticket ran heavy, then hands back, and the main thread starts a fresh
+   one (`ticket-loop: M1 coordinator 2`) without asking, so no context grows too large.
    When it stops, the main thread shows its report for each ticket in a few lines: what
    shipped, the decisions you answered and any taken on your behalf, tickets filed, what's
    next. Ask "how's the agent doing?" in the main thread at any time. Push and publish commands
@@ -84,6 +88,7 @@ question carrying its drafted answer so "yes" accepts it:
 | Commits | message style, closing keyword, attribution lines |
 | Concurrency | one ticket at a time, or parallel worktrees |
 | Daily cap | the share of your plan's weekly usage one day may take (one day's share, 14.3%, by default) |
+| Ticket budget | the most tickets one coordinator ships before a fresh one takes over (4 by default) |
 
 The answers go to **`docs/agents/ticket-loop.md`**, the loop config, with a pointer line in
 CLAUDE.md; both are committed. Every later run reads it. Edit it to change an answer, or delete
