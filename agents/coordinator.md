@@ -63,7 +63,7 @@ Verified on Claude Code 2.1.316; see [ADR-0001](../docs/adr/0001-coordinator-dis
 A hand-back is one of:
 
 - **decision needed** (step 3): the ticket, the options, your recommendation, whether the implementer did real work, and what's committed or left in the tree. The launcher resumes you with the answer.
-- **budget reached** (see Ticket budget): the next ticket, number and title. With the reports, that's all it carries: the launcher starts a fresh coordinator, which reads the rest from the tracker.
+- **budget reached** (see Ticket budget): the next ticket, number and title, any named tickets skipped and why (step 1), and what any ready-for-human ticket needs (Stop conditions). With the reports, that's all it carries: the launcher starts a fresh coordinator, which reads the rest from the tracker.
 - a **stop condition** (which one, and what the user needs to know or do), then what's next.
 
 Whichever it is, add the report from step 6 of each ticket shipped since your last hand-back. That's all the launcher keeps, so leave out the working detail. **Dispatch** above says how to hand back in your session. A hand-back ends your turn of work. If the launcher resumes you with SendMessage, carry on from where you stopped: the run goes on until your next hand-back.
@@ -75,7 +75,7 @@ Your brief gives the **ticket budget**: the most tickets you ship before handing
 - you've shipped the budget; or
 - you've shipped at least one ticket and the last one ran heavy (many test failures, a decision round trip, a long fix pass), so a fresh context is worth more than finishing the budget.
 
-When the frontier is empty, the stop conditions apply instead, so only the run's last coordinator hands back the milestone stop and writes its summary.
+When the frontier is empty, there's no next ticket: hand back as Stop conditions says instead.
 
 ## Daily cap
 

@@ -58,14 +58,14 @@ yours, and stops only when it needs you and at the end of each milestone.
 6. **Let it work.** The coordinator runs in the background, labelled with what it runs
    (`ticket-loop: #82 coordinator 1`), and your main thread is free for other work meanwhile.
    Before it starts, the main thread says how big the run is (`M1: 7 ready, about 2
-   coordinators.`). Each coordinator ships at most the config's **ticket budget** (4 by
-   default), or fewer if a ticket ran heavy, then hands back, and the main thread starts a fresh
-   one (`ticket-loop: M1 coordinator 2`) without asking, so no context grows too large.
-   When it stops, the main thread shows its report for each ticket in a few lines: what
-   shipped, the decisions you answered and any taken on your behalf, tickets filed, what's
-   next. Ask "how's the agent doing?" in the main thread at any time. Push and publish commands
-   ask permission in your main session, naming the agent, unless your settings allow them;
-   allow them to keep the loop unattended.
+   coordinators.`). Each coordinator ships at most the config's **ticket budget**, or fewer if
+   a ticket ran heavy, then hands back, and the main thread starts a fresh one
+   (`ticket-loop: M1 coordinator 2`) without asking, so no coordinator's context grows too
+   large. At each hand-back, handovers included, the main thread shows the report for each
+   ticket shipped since the last, in a few lines: what shipped, the decisions you answered
+   and any taken on your behalf, tickets filed, what's next. Ask "how's the agent doing?" in
+   the main thread at any time. Push and publish commands ask permission in your main session,
+   naming the agent, unless your settings allow them; allow them to keep the loop unattended.
 
 ## First run
 

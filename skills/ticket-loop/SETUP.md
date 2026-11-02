@@ -22,7 +22,7 @@ Call the Skill tool with `mattpocock-skills:grilling`. The design tree's root qu
 10. **Commits:** the message style, closing keyword and attribution lines; one commit per ticket plus its fix commit.
 11. **Concurrency:** one ticket at a time, or implementers in parallel worktrees (only when nothing they test shares one running resource).
 12. **Daily cap:** the share of the plan's weekly usage one day may take before the loop stops to ask. Recommend one day's share, 14.3% (100 ÷ 7). Not applicable without plan usage to read (an API key rather than a Pro, Max or Ultra plan). The loop reads today's use with the tokencount plugin (1.1.0 or later); if it isn't installed, say how (`claude plugin marketplace add jhnhnsn/tokencount`, `claude plugin install tokencount@tokencount`, then a restart).
-13. **Ticket budget:** the most tickets one coordinator ships before handing back to a fresh one, so no coordinator's context grows too large. Recommend 4. A config without one uses 4.
+13. **Ticket budget:** the most tickets one coordinator ships before handing back to a fresh one, so no coordinator's context grows too large. Recommend 4.
 
 Done when the grilling's frontier is empty and the user confirms the answers.
 
