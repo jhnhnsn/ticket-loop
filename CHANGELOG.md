@@ -4,6 +4,8 @@ What changes for you, the person running the loop, newest first.
 
 ## Unreleased
 
+- Long runs are split across coordinators, so none of them fills its context. Each ships at most the config's ticket budget (4 unless you set one), then a fresh `… coordinator 2` takes over from the tracker without asking you. Before the first one starts, the run is previewed: `M1: 7 ready, about 2 coordinators.` Setup asks for the budget. ([#5](https://github.com/jhnhnsn/ticket-loop/issues/5))
+
 ## 1.9.0
 
 Runs go through a coordinator subagent, so your main thread stays free, and a decision that's yours no longer ends the run. Published partway through the coordinator milestone (#1): the ticket budget, handover and the daily cap across coordinators are still to come.
