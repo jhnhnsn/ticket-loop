@@ -58,7 +58,7 @@ yours, and stops only when it needs you and at the end of each milestone.
 6. **Let it work.** The coordinator runs in the background, labelled with what it runs
    (`ticket-loop: #82 coordinator 1`), and your main thread is free for other work meanwhile.
    Before it starts, the main thread says how big the run is (`M1: 7 ready, about 2
-   coordinators.`). Each coordinator ships at most the config's **ticket budget**, or fewer if
+   coordinators.`) and how each role will run, model and effort (see [Models](#models)). Each coordinator ships at most the config's **ticket budget**, or fewer if
    a ticket ran heavy, then hands back, and the main thread starts a fresh one
    (`ticket-loop: M1 coordinator 2`) without asking, so no coordinator's context grows too
    large. At each hand-back, handovers included, the main thread shows the report for each
@@ -84,7 +84,7 @@ question carrying its drafted answer so "yes" accepts it:
 | Ship | the branch to push, the publish or deploy command, per ticket or per milestone |
 | Changelog | where each shipped ticket's entry goes, who reads it, what it says, its order and links, where milestone summaries go, whether upcoming milestones are listed |
 | Stops | anything beyond the built-in stops |
-| Models | the model for the coordinator, the implementer, the Standards reviewer and the Spec reviewer |
+| Models | the model and effort for the coordinator, the implementer, the Standards reviewer and the Spec reviewer |
 | Commits | message style, closing keyword, attribution lines |
 | Concurrency | one ticket at a time, or parallel worktrees |
 | Daily cap | the share of your plan's weekly usage one day may take (one day's share, 14.3%, by default) |
@@ -174,6 +174,32 @@ suggestion, from a trial where Opus and Sonnet implemented the same ticket side 
 for the implementer and the Spec reviewer, Sonnet for the Standards reviewer.** Sonnet's implementer was about 40% faster but
 missed a detail in the reference source that Opus got right; the Spec reviewer caught it, which
 is why that review stays on the stronger model.
+
+Each role's **effort** comes from the config too, next to its model, and is passed to the
+subagent's dispatch (`low`, `medium`, `high`, `xhigh`, `max`). The defaults, which a config
+without efforts uses without asking: **implementer `low`, coordinator `medium`, Spec reviewer
+`high`**, and the Standards reviewer at its usual effort (`usual`: dispatched without one). The
+Spec reviewer is where real bugs turn up, so it stays thorough while the implementer runs light.
+The trade-off: each ticket gets one fix pass that isn't reviewed again, so what a low-effort
+implementer misses either lands in a low-effort fix pass or becomes a follow-up ticket. Raise
+the implementer's effort if that happens often. To change a role's effort, edit its line in the
+config's Models section:
+
+```
+- Implementer: Opus, medium effort.
+- Standards reviewer: Sonnet, low effort.
+```
+
+Before each run, the main thread previews every role as the run will use them, defaults
+applied, under the ready count:
+
+```
+M1: 7 ready, about 2 coordinators.
+Coordinator: Opus, medium · Implementer: Opus, low · Standards reviewer: Sonnet, usual · Spec reviewer: Opus, high
+```
+
+Per-role effort needs Claude Code 2.1.292 or later. A model without the level asked for runs
+the highest one below it, and `CLAUDE_CODE_EFFORT_LEVEL`, if set, overrides every role's.
 
 ## Tips
 

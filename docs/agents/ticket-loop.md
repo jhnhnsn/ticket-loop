@@ -29,6 +29,7 @@ Test hooks:
 - **Dummy tickets:** each test plan files its own under a fresh sandbox parent issue (one-line tickets; a ticket built to force a decision; several for a handover).
 - **Low cap:** set the sandbox config's Daily cap below today's use to make the cap trip at once.
 - **Low budget:** add a `## Ticket budget` section to the sandbox config with a budget of 1, so a handover comes after the first ticket.
+- **Effort overrides:** give every role an effort in the sandbox config's Models section that differs from the defaults (`- Implementer: Sonnet, high effort.`, and so on for the coordinator, Standards reviewer and Spec reviewer), then read each Agent call's `effort` in the stream-json; leave them out to test the defaults. `CLAUDE_CODE_EFFORT_LEVEL` must be unset, since it overrides the parameter.
 - **Milestone summary:** the sandbox config writes none; to test the milestone stop, set its Changelog to put a finished parent's summary under `## Unreleased`, above its entries.
 
 ## Reference
