@@ -57,14 +57,35 @@ yours, and stops only when it needs you and at the end of each milestone.
 
 6. **Let it work.** The coordinator runs in the background, labelled with what it runs
    (`ticket-loop: #82 coordinator 1`), and your main thread is free for other work meanwhile.
-   As it starts, the main thread says how big the run is (`M1: 7 ready, about 2
-   coordinators.`) and how each role runs, model and effort (see [Models](#models)).
+   As it starts, the main thread previews the run: how big it is, how far through its
+   tickets it is, how much of your [daily cap](#when-it-stops) today has used, and how each
+   role runs, model and effort (see [Models](#models)):
+
+   ```
+   M1: 7 ready, about 2 coordinators.
+   Tickets  [███░░░░░░░] 3 of 10 shipped
+   Usage    [████░░░░░░] 6.1% of the week today, cap 14.3%
+   Coordinator: Opus, medium · Implementer: Opus, low · Standards reviewer: Sonnet, usual · Spec reviewer: Opus, high
+   ```
+
+   **Tickets** counts the parent's tickets that are closed, out of all of them, open or
+   closed; run with tickets, the named ones that are closed, out of those named. **Usage** is
+   how much of your plan's week today has used (tokencount's `today.percent_of_week`) against
+   the config's daily cap, and its bar fills as a share of the cap: full at or over it, when
+   the coordinator's first cap check stops the run. Without plan usage to read (the config
+   marks the cap not applicable) it says `not applicable (no plan usage to read)`, and if
+   tokencount can't tell, `can't read today's usage`, which stops the run the same way.
+
    Each coordinator ships at most the config's **ticket budget**, or fewer if a ticket ran
    heavy, then hands back, and the main thread starts a fresh one
    (`ticket-loop: M1 coordinator 2`) without asking, so no coordinator's context grows too
-   large. At each hand-back, handovers included, the main thread shows the report for each
-   ticket shipped since the last, in a few lines: what shipped, the decisions you answered
-   and any taken on your behalf, tickets filed, what's next. Ask "how's the agent doing?" in
+   large. At each hand-back (a decision for you, a handover, or a stop) the main thread shows
+   the report for each ticket shipped since the last, in a few lines: what shipped, the
+   decisions you answered and any taken on your behalf, tickets filed, what's next. Under the
+   reports come the Tickets and Usage bars again, read fresh from the tracker and tokencount,
+   so you see the run's progress partway through: before the question for a decision, and
+   before the fresh coordinator starts for a handover, which doesn't repeat the rest of the
+   preview. Ask "how's the agent doing?" in
    the main thread at any time. Push and publish commands ask permission in your main session,
    naming the agent, unless your settings allow them; allow them to keep the loop unattended.
 
@@ -191,11 +212,10 @@ config's Models section:
 - Standards reviewer: Sonnet, low effort.
 ```
 
-When a run starts, the main thread previews every role as the run uses them, defaults
-applied, under the ready count:
+When a run starts, the main thread's preview (see [Let it work](#getting-started)) ends with
+every role as the run uses them, defaults applied:
 
 ```
-M1: 7 ready, about 2 coordinators.
 Coordinator: Opus, medium · Implementer: Opus, low · Standards reviewer: Sonnet, usual · Spec reviewer: Opus, high
 ```
 
