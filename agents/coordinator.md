@@ -1,6 +1,6 @@
 ---
 name: coordinator
-description: The ticket-loop coordinator. Runs one loop run's tickets to shipped (frontier, implement, test queue, review, ship, report), dispatching implementer and reviewer subagents of its own. Hands back a decision for the user (and is resumed with the answer), its ticket budget reached (a fresh coordinator carries on), or a stop condition, with its per-ticket reports. Dispatched by the /ticket-loop:ticket-loop launcher, not for other use.
+description: The ticket-loop coordinator. Runs one loop run's tickets to shipped (frontier, implement, test queue, review, ship, report), dispatching implementer and reviewer subagents of its own. Hands back a decision for the user (and is resumed with the answer), the daily cap reached (and is resumed with the user's answer), its ticket budget reached (a fresh coordinator carries on), or a stop condition, with its per-ticket reports. Dispatched by the /ticket-loop:ticket-loop launcher, not for other use.
 model: opus
 # A backstop only: the ticket budget is what keeps a coordinator's context small.
 autoCompactWindow: 200000
@@ -85,12 +85,12 @@ When the frontier is empty, there's no next ticket: hand back as Stop conditions
 The loop never goes past the user's **daily cap** (the share of their plan's weekly usage one day may take, from the loop config). Check the cap before every subagent dispatch and before every ship, with the Skill tool's `tokencount:tokencount` (the tokencount plugin): its `--json` report's `today.percent_of_week` is how much of the plan's weekly usage today has taken so far. Don't set tokencount's guard for this: it blocks every session on the account, where the cap only pauses the loop.
 
 - **Under the cap:** carry on.
-- **At or over the cap, or unreadable** (tokencount isn't installed, the skill the config's Daily cap reads from isn't available, its `usage_source` is `unavailable`, or `today.percent_of_week` is null): dispatch nothing and ship nothing. Hand back **cap reached** (see Hand-back). The launcher asks the user and resumes you with the answer:
+- **At or over the cap, or unreadable** (tokencount isn't installed or isn't available, its `usage_source` is `unavailable`, or `today.percent_of_week` is null): dispatch nothing and ship nothing. Hand back **cap reached** (see Hand-back). The launcher asks the user and resumes you with the answer:
   - **Stop here:** dispatch and ship nothing more. Leave the ticket in hand as it is, and hand back a stop condition saying what's committed locally and not pushed, and what's left in the tree; a later run picks it up.
   - **Finish this ticket or one more:** carry on without the check until one more ticket ships: the ticket in hand, or, with none in hand, the next one. Then the check applies again, and at the cap you hand back **cap reached** again.
-  - **Keep going today:** skip the check for the rest of that day (the date your brief or the answer gives). A brief that says the user chose to keep going today means the same: skip the check that day, without handing back for it.
+  - **Keep going today:** skip the check for the rest of that day: while today's local date (`date +%F`) is the date the launcher recorded with the answer, in its message or your brief. From the next date on, check again. A brief that says the user chose to keep going today means the same: skip the check that day, without handing back for it.
 
-If the config marks the cap not applicable (no plan usage to read, as with an API key), skip the check. The config's Daily cap names the skill and field it reads from; read the cap with that skill (tokencount's, unless it names another).
+If the config marks the cap not applicable (no plan usage to read, as with an API key), skip the check.
 
 ## Stop conditions
 

@@ -29,7 +29,7 @@ Test hooks:
 - **Dummy tickets:** each test plan files its own under a fresh sandbox parent issue (one-line tickets; a ticket built to force a decision; several for a handover).
 - **Low cap:** set the sandbox config's Daily cap below today's use to make the cap trip at once.
 - **Cap not applicable:** replace the sandbox config's Daily cap section's text with `Not applicable: no plan usage to read.`, so the loop skips the cap and the preview's Usage line says so.
-- **Cap unreadable:** in the sandbox config's Daily cap, name a skill that doesn't exist as the reader (`read from the skill tokencount-missing:tokencount's today.percent_of_week`), so the coordinator can't read the cap, as if tokencount were unavailable, without touching the installed plugin.
+- **Cap unreadable:** disable tokencount in the sandbox only, with a sandbox `.claude/settings.local.json` of `{"enabledPlugins": {"tokencount@tokencount": false}}`, so the coordinator can't read the cap. Clean-up removes the file. Never change the user settings or the plugin cache for this.
 - **Low budget:** add a `## Ticket budget` section to the sandbox config with a budget of 1, so a handover comes after the first ticket.
 - **Effort overrides:** give every role in the sandbox config's Models section an effort other than its default (`- Implementer: Sonnet, high effort.`), then read each Agent call's `effort` in the stream-json. Keep `CLAUDE_CODE_EFFORT_LEVEL` unset: it overrides the parameter.
 - **Milestone summary:** the sandbox config writes none; to test the milestone stop, set its Changelog to put a finished parent's summary under `## Unreleased`, above its entries.

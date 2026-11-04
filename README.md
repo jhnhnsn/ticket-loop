@@ -72,9 +72,9 @@ yours, and stops only when it needs you and at the end of each milestone.
    closed; run with tickets, the named ones that are closed, out of those named. **Usage** is
    how much of your plan's week today has used (tokencount's `today.percent_of_week`) against
    the config's daily cap, and its bar fills as a share of the cap: full at or over it, when
-   the coordinator's first cap check stops the run. Without plan usage to read (the config
+   the coordinator's next cap check hands back to ask you. Without plan usage to read (the config
    marks the cap not applicable) it says `not applicable (no plan usage to read)`, and if
-   tokencount can't tell, `can't read today's usage`, which stops the run the same way.
+   tokencount can't tell, `can't read today's usage`, which hands back the same way.
 
    Each coordinator ships at most the config's **ticket budget**, or fewer if a ticket ran
    heavy, then hands back, and the main thread starts a fresh one
@@ -185,9 +185,12 @@ for each ticket it worked.
   tool.
 - A push, publish or check fails in a way a fix can't safely cover.
 - **The daily cap is reached.** Before each dispatch and each ship, the loop checks how much of
-  your plan's weekly usage today has taken. At the cap, or if it can't tell, it stops before
-  dispatching or shipping anything, and tells you today's use and where the ticket in hand
-  stands. To go on today, raise the cap in the loop config; otherwise run it again tomorrow.
+  your plan's weekly usage today has taken. At the cap, or if it can't tell, it dispatches and
+  ships nothing and asks you, with today's use, the cap and where the ticket in hand stands:
+  **stop here** (the ticket stays as it is, and it says what's committed locally), **finish this
+  ticket or one more** (then it asks again), or **keep going today** (not asked again today,
+  even by the next coordinator). In a headless run it can't ask, so it stops there: raise the
+  cap in the loop config, or run it interactively, to go on today; otherwise run it tomorrow.
 - Anything else your config lists.
 
 ## Models
