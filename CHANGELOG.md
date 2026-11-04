@@ -2,7 +2,9 @@
 
 What changes for you, the person running the loop, newest first.
 
-## Unreleased
+## 1.10.0
+
+Long runs hand over to a fresh coordinator at a ticket budget, each role runs at an effort you set in the loop config (implementer `low` by default), and the preview and every hand-back show the run's progress and today's usage against your cap. Published partway through the coordinator milestone (#1): the daily cap across coordinators (#6) is still to come.
 
 - At a decision, the question comes first, with nothing printed before it. Once you answer, one message shows the reports, then the Tickets and Usage bars, then a line saying your answer is on the ticket and the coordinator has resumed. A headless run still shows them with the decision, since there it's a stop. ([#23](https://github.com/jhnhnsn/ticket-loop/issues/23))
 - The run's preview shows two bars under the ready count: the tickets shipped out of the run's total, and today's usage against your daily cap. If there's no plan usage, or it can't be read, a line says so instead of a bar. The bars show again, read fresh, at every hand-back. At a handover they come in the message saying which coordinator took over. ([#19](https://github.com/jhnhnsn/ticket-loop/issues/19))
