@@ -2,7 +2,10 @@
 
 What changes for you, the person running the loop, newest first.
 
-## Unreleased
+## 1.11.0
+
+The coordinator milestone (#1) is done. Every run goes through a background coordinator, so your main thread stays free, and long runs hand over to fresh coordinators at a ticket budget.
+Decisions and the daily cap now come to you as questions instead of ending the run, and a Keep going today answer holds across handovers.
 
 - At the daily cap, or when it can't be read, the run no longer just stops. The coordinator hands back before it dispatches anything, and you're asked: Stop here, Finish this ticket or one more, or Keep going today. The same coordinator then carries on. Keep going today holds for the rest of that day, including after a handover, so you aren't asked again. A headless run still stops at the cap. ([#6](https://github.com/jhnhnsn/ticket-loop/issues/6))
 
