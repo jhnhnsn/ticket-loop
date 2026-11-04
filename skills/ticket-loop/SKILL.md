@@ -13,6 +13,8 @@ The argument is either a parent or one or more tickets (`/ticket-loop 120`, `/ti
 
 The **loop config**, `docs/agents/ticket-loop.md`, says how this project's tickets are found, built, tested, shipped and written up, and which model and effort run each role. Both roles read it.
 
+**Bash rules.** You follow the coordinator's Bash rules ([`agents/coordinator.md`](../../agents/coordinator.md), Bash rules), in setup too: change files with Edit or Write, one plain command per Bash call with no chains, loops, variables or pipes of any kind, tickets read with the config's read command, tokencount run as its skill says. A refused command means rewrite it simpler and try again.
+
 ## Roles
 
 The run has four roles: the coordinator, the implementer, the Standards reviewer and the Spec reviewer. Each takes its model and its **effort** from the config's Models section (`Implementer: Opus, low effort.`). Whoever dispatches a role passes its effort as the Agent tool's `effort` parameter (`low`, `medium`, `high`, `xhigh`, `max`): you for the coordinator, the coordinator for the implementers and reviewers. The config is the user's explicit choice of effort, so pass it. `usual` means the role is dispatched without an `effort` parameter, at its usual effort.
@@ -90,7 +92,7 @@ Read them before you write anything for the moment they show, and print them:
 
    As with step 2's preview, write it all out as text every time: lines worked out in your thinking aren't shown. End your turn: its next hand-back wakes you, and you go back to step 4.
 
-   Without AskUserQuestion (a headless run), treat it as a stop instead: under step 4's reports and bars, give the ticket, the options and the recommendation, recommendation first; the user records their answer on the ticket, and running the same command again carries on from it.
+   Without AskUserQuestion (a headless run), treat it as a stop instead, in one final message: the report of every ticket shipped this run, from every coordinator's hand-backs (not only this one's, since the last message may be all the user reads), then step 4's bars, then the ticket, the options and the recommendation, recommendation first; the user records their answer on the ticket, and running the same command again carries on from it.
 
 6. **Relay the cap.** When the hand-back is **cap reached**, ask the user the cap question with AskUserQuestion: today's use and the cap (or that the cap can't be read, and why) and the ticket in hand and where it stands, in the question, with three options: **Stop here**, **Finish this ticket or one more**, **Keep going today**. Recommend none. Write nothing to the user before the question. Then resume the same coordinator with SendMessage, to the agent ID its dispatch returned, with the answer, and, for keep going today, today's local date (`date +%F`). Don't dispatch a new coordinator for this. Remember a keep going today answer and its date for the rest of the run: every later coordinator's brief that day carries it (steps 2 and 7). Once SendMessage returns, tell the user, in one message, in this order:
    - the hand-back's reports (step 4), if it carried any;
@@ -99,7 +101,7 @@ Read them before you write anything for the moment they show, and print them:
 
    Write it all out as text every time. End your turn: its next hand-back wakes you, and you go back to step 4. Stop here comes back as a stop condition (step 8). Finish this ticket or one more comes back as cap reached again once that ticket ships, and you ask again.
 
-   Without AskUserQuestion (a headless run), treat it as a stop instead: under step 4's reports and bars, give the ticket in hand, where it stands and what's committed locally. To go on today, the user raises the cap in the loop config, or runs the loop interactively and answers the question; otherwise the run waits for tomorrow.
+   Without AskUserQuestion (a headless run), treat it as a stop instead, in one final message: the report of every ticket shipped this run, from every coordinator's hand-backs, then step 4's bars, then the ticket in hand, where it stands and what's committed locally. To go on today, the user raises the cap in the loop config, or runs the loop interactively and answers the question; otherwise the run waits for tomorrow.
 
 7. **Hand over.** When the hand-back is **budget reached**, its next ticket shows the frontier still has a ready one: without asking, dispatch a fresh coordinator with step 2's Agent call, numbered one up (`ticket-loop: M1 coordinator 2`), with the same budget, roles line and offer answers, and the keep going today line exactly as step 2 gives it, and without the preview, which the first coordinator's message already gave. It rebuilds the frontier from the tracker. For named tickets, its brief names only those not yet shipped, in the original order. Write nothing to the user before the dispatch. Once the call returns, tell the user, in place of step 2's message, in one message, in this order:
    - the hand-back's reports (step 4);

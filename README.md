@@ -100,7 +100,7 @@ question carrying its drafted answer so "yes" accepts it:
 
 | Topic | What it settles |
 | --- | --- |
-| Tickets | where they live, how a parent holds them, how blocking is recorded, the labels |
+| Tickets | where they live, how a parent holds them, how blocking is recorded, the labels, the command that reads a ticket and its comments |
 | Order | which parent next, and the order inside it |
 | Checks | the command for the automated checks and tests |
 | Test queue | what gets run or playtested by hand, with which tools, temporary settings and how they're undone, what a test plan measures |

@@ -24,7 +24,7 @@ The app is the plugin itself. A ticket is tested by a real loop run of the worki
 - **Read:** the stream-json output (Agent dispatches and their `description` labels, AskUserQuestion calls, the final report), the sandbox tracker (`gh issue view`, comments, closures) and the sandbox's `git log`.
 - **Interactive:** steps that need a question answered (decisions, the daily cap) run in an interactive `claude --plugin-dir ~/github/ticket-loop` session in the sandbox, which the user drives from a test plan: AskUserQuestion isn't available headless (proven at setup).
 - **Test plan measures:** labels in the agent list, what reaches the main thread, tracker state, commits, and that the main session stays free.
-- **Clean up after each test:** close its dummy tickets and parent, reset the sandbox's `main` to its starting commit, c0366e7, and undo any config change the test made. Reset with exactly these two commands, each in its own Bash call and in this `git -C` form, since that's the only form the permission rules allow without asking: `git -C ~/github/ticket-loop-sandbox reset --hard c0366e7`, then `git -C ~/github/ticket-loop-sandbox push --force-with-lease origin main`. Force-push nowhere but the sandbox.
+- **Clean up after each test:** close its dummy tickets and parent, reset the sandbox's `main` to its starting commit, 635fd7c, and undo any config change the test made. Reset with exactly these two commands, each in its own Bash call and in this `git -C` form, since that's the only form the permission rules allow without asking: `git -C ~/github/ticket-loop-sandbox reset --hard 635fd7c`, then `git -C ~/github/ticket-loop-sandbox push --force-with-lease origin main`. Force-push nowhere but the sandbox.
 
 Test hooks:
 
