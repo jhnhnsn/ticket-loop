@@ -4,7 +4,8 @@ What changes for you, the person running the loop, newest first.
 
 ## Unreleased
 
-- Long runs are split across coordinators, so none of them fills its context. Each ships at most the config's ticket budget (4 unless you set one), then a fresh `… coordinator 2` takes over from the tracker without asking you. Before the first one starts, the run is previewed: `M1: 7 ready, about 2 coordinators.` Setup asks for the budget. ([#5](https://github.com/jhnhnsn/ticket-loop/issues/5))
+- Each role runs at an effort you can set in the loop config, next to its model: by default the implementer at `low`, the coordinator at `medium`, the Spec reviewer at `high` and the Standards reviewer at its usual effort. Configs without efforts use these without asking, and setup asks for them. The run's preview, now shown as the first coordinator starts, gives each role's model and effort on a line under the ready count. ([#18](https://github.com/jhnhnsn/ticket-loop/issues/18))
+- Long runs are split across coordinators, so none of them fills its context. Each ships at most the config's ticket budget (4 unless you set one), then a fresh `… coordinator 2` takes over from the tracker without asking you. As the first one starts, the run is previewed: `M1: 7 ready, about 2 coordinators.` Setup asks for the budget. ([#5](https://github.com/jhnhnsn/ticket-loop/issues/5))
 
 ## 1.9.0
 
