@@ -2,6 +2,10 @@
 
 What changes for you, the person running the loop, newest first.
 
+## Unreleased
+
+- At the daily cap, or when it can't be read, the run no longer just stops. The coordinator hands back before it dispatches anything, and you're asked: Stop here, Finish this ticket or one more, or Keep going today. The same coordinator then carries on. Keep going today holds for the rest of that day, including after a handover, so you aren't asked again. A headless run still stops at the cap. ([#6](https://github.com/jhnhnsn/ticket-loop/issues/6))
+
 ## 1.10.0
 
 Long runs hand over to a fresh coordinator at a ticket budget, each role runs at an effort you set in the loop config (implementer `low` by default), and the preview and every hand-back show the run's progress and today's usage against your cap. Published partway through the coordinator milestone (#1): the daily cap across coordinators (#6) is still to come.
