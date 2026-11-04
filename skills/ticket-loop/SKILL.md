@@ -7,7 +7,7 @@ disable-model-invocation: true
 Ship the tickets under a parent (a milestone, or a spec or map issue), or just the tickets named, one at a time, each built by a fresh implementer subagent, tested from the test queue, reviewed by fresh reviewer subagents, then pushed and published. The loop runs in two roles:
 
 - You are the **launcher**, in the main thread: setup, resolving the argument, dispatching the coordinator, asking the user its decisions, and showing the user what it hands back. You keep no ticket's working detail, and the main thread stays free for the user while the loop runs.
-- The **coordinator** is this plugin's `ticket-loop:coordinator` agent, a subagent that runs the loop: frontier, implement, test queue, review, ship, report, ticket after ticket, dispatching implementer and reviewer subagents of its own. It ships at most the config's **ticket budget** of tickets, so its context stays small. It hands back **decision needed** (a decision that's the user's: you ask it, then resume the coordinator with the answer), **budget reached** (you start a fresh coordinator, which carries on from the tracker), or a **stop condition**, which ends the run; each carries its per-ticket reports. Its steps are in its definition, [`agents/coordinator.md`](../../agents/coordinator.md).
+- The **coordinator** is this plugin's `ticket-loop:coordinator` agent, a subagent that runs the loop: frontier, implement, test queue, review, ship, report, ticket after ticket, dispatching implementer and reviewer subagents of its own. It ships at most the config's **ticket budget** of tickets, so its context stays small. It hands back **decision needed** (a decision that's the user's: you ask it, then resume the coordinator with the answer), **cap reached** (the daily cap is reached or can't be read: you ask the cap question, then resume it), **budget reached** (you start a fresh coordinator, which carries on from the tracker), or a **stop condition**, which ends the run; each carries its per-ticket reports. Its steps are in its definition, [`agents/coordinator.md`](../../agents/coordinator.md).
 
 The argument is either a parent or one or more tickets (`/ticket-loop 120`, `/ticket-loop v1`, `/ticket-loop 82`, `/ticket-loop 82 84 85`). A parent is whatever holds tickets in the loop config's tracker: an issue with sub-issues, or a milestone by name; any other issue is a ticket.
 
@@ -48,9 +48,9 @@ Usage    [████░░░░░░] 6.1% of the week today, cap 14.3%
 Read them before you write anything for the moment they show, and print them:
 
 - at the start of a run, in step 2's preview, after the coordinator's dispatch;
-- at a **stop condition** hand-back, under its reports (step 4), and at a **decision needed** one in a headless run, where it's a stop (step 5);
-- at a **decision needed** hand-back with AskUserQuestion, under its reports in step 5's "answer recorded" message, after the user answers and the coordinator is resumed. Read them before the question, but print nothing of them before it;
-- at a **budget reached** hand-back, under its reports in step 6's "took over" message, after the fresh coordinator's dispatch. A handover shows nothing else of the preview.
+- at a **stop condition** hand-back, under its reports (step 4), and at a **decision needed** or **cap reached** one in a headless run, where it's a stop (steps 5 and 6);
+- at a **decision needed** or **cap reached** hand-back with AskUserQuestion, under its reports in step 5's or step 6's "answer recorded" message, after the user answers and the coordinator is resumed. Read them before the question, but print nothing of them before it;
+- at a **budget reached** hand-back, under its reports in step 7's "took over" message, after the fresh coordinator's dispatch. A handover shows nothing else of the preview.
 
 ## Steps
 
@@ -63,7 +63,7 @@ Read them before you write anything for the moment they show, and print them:
 
    Done when you can name the run (`M1`, `#120`, `#82 #84`), the offers are answered and you have the preview's lines: the ready count, the two bars and the roles line.
 
-2. **Dispatch the coordinator.** Use the Agent tool with `subagent_type` `ticket-loop:coordinator`, in the background, on the coordinator's model, passed as an alias (`opus`, `sonnet`, `haiku`, `fable`), and with the coordinator's effort as the Agent tool's `effort` parameter, both as the roles line gives them (an effort of `usual`: leave `effort` out). Label it (the Agent tool's `description`) `ticket-loop: <what it runs> coordinator <n>`: the run as step 1 named it, and `<n>` counting this run's coordinators from 1 (`ticket-loop: M1 coordinator 1`, `ticket-loop: #82 #84 coordinator 1`). The `ticket-loop:` prefix sets it apart from the per-ticket subagents it dispatches. Its brief names the run (the parent, or the tickets in order), gives the ticket budget, the roles line and the user's answers to the offers, and points at the loop config.
+2. **Dispatch the coordinator.** Use the Agent tool with `subagent_type` `ticket-loop:coordinator`, in the background, on the coordinator's model, passed as an alias (`opus`, `sonnet`, `haiku`, `fable`), and with the coordinator's effort as the Agent tool's `effort` parameter, both as the roles line gives them (an effort of `usual`: leave `effort` out). Label it (the Agent tool's `description`) `ticket-loop: <what it runs> coordinator <n>`: the run as step 1 named it, and `<n>` counting this run's coordinators from 1 (`ticket-loop: M1 coordinator 1`, `ticket-loop: #82 #84 coordinator 1`). The `ticket-loop:` prefix sets it apart from the per-ticket subagents it dispatches. Its brief names the run (the parent, or the tickets in order), gives the ticket budget, the roles line and the user's answers to the offers, and points at the loop config. If the user answered **keep going today** to the cap question earlier in this run, the brief says so, with today's date, so the coordinator skips the cap check that day and doesn't ask again (step 6).
 
    Once the call returns, tell the user the coordinator is running, in a message that opens with the run's **preview**, these lines in this order:
    - step 1's ready count;
@@ -92,15 +92,24 @@ Read them before you write anything for the moment they show, and print them:
 
    Without AskUserQuestion (a headless run), treat it as a stop instead: under step 4's reports and bars, give the ticket, the options and the recommendation, recommendation first; the user records their answer on the ticket, and running the same command again carries on from it.
 
-6. **Hand over.** When the hand-back is **budget reached**, its next ticket shows the frontier still has a ready one: without asking, dispatch a fresh coordinator with step 2's Agent call, numbered one up (`ticket-loop: M1 coordinator 2`), with the same budget, roles line and offer answers, and without the preview, which the first coordinator's message already gave. It rebuilds the frontier from the tracker. For named tickets, its brief names only those not yet shipped, in the original order. Write nothing to the user before the dispatch. Once the call returns, tell the user, in place of step 2's message, in one message, in this order:
+6. **Relay the cap.** When the hand-back is **cap reached**, ask the user the cap question with AskUserQuestion: today's use and the cap (or that the cap can't be read, and why) and the ticket in hand and where it stands, in the question, with three options: **Stop here**, **Finish this ticket or one more**, **Keep going today**. Recommend none. Write nothing to the user before the question. Then resume the same coordinator with SendMessage, to the agent ID its dispatch returned, with the answer, and with today's date for keep going today. Don't dispatch a new coordinator for this. Remember a keep going today answer and its date for the rest of the run: every later coordinator's brief that day carries it (steps 2 and 7). Once SendMessage returns, tell the user, in one message, in this order:
+   - the hand-back's reports (step 4), if it carried any;
+   - the two progress bars step 4 read;
+   - one line saying their answer and that the coordinator is resumed.
+
+   Write it all out as text every time. End your turn: its next hand-back wakes you, and you go back to step 4. Stop here comes back as a stop condition (step 8). Finish this ticket or one more comes back as cap reached again once that ticket ships, and you ask again.
+
+   Without AskUserQuestion (a headless run), treat it as a stop instead: under step 4's reports and bars, give the ticket in hand, where it stands and what's committed locally. To go on today, the user raises the cap in the loop config, or runs the loop interactively and answers the question; otherwise the run waits for tomorrow.
+
+7. **Hand over.** When the hand-back is **budget reached**, its next ticket shows the frontier still has a ready one: without asking, dispatch a fresh coordinator with step 2's Agent call, numbered one up (`ticket-loop: M1 coordinator 2`), with the same budget, roles line and offer answers, and any keep going today answer from today (step 6), and without the preview, which the first coordinator's message already gave. It rebuilds the frontier from the tracker. For named tickets, its brief names only those not yet shipped, in the original order. Write nothing to the user before the dispatch. Once the call returns, tell the user, in place of step 2's message, in one message, in this order:
    - the hand-back's reports (step 4);
    - the two progress bars step 4 read;
    - one line saying which coordinator took over, with any skipped tickets or ready-for-human notes the hand-back carried.
 
    As with step 2's preview, write it all out as text every time, in a headless run too: lines worked out in your thinking aren't shown. End your turn: its hand-back wakes you.
 
-7. **Show the stop.** When the hand-back is a **stop condition**, show it, with what the user needs to know or do, then what's next. The run ends here:
-   - **The daily cap:** step 4's Usage bar gives today's use and the cap, so don't repeat the coordinator's figures; give the ticket in hand and where it stands. To go on today, the user raises the cap in the loop config; otherwise the run waits for tomorrow.
+8. **Show the stop.** When the hand-back is a **stop condition**, show it, with what the user needs to know or do, then what's next. The run ends here:
+   - **Stop here at the cap** (step 6): step 4's Usage bar gives today's use and the cap, so don't repeat the coordinator's figures; give the ticket in hand, left as it is, and what's committed locally and not pushed. A later run picks it up.
    - Anything else: as the coordinator said it.
 
 Stopping the coordinator in the agent list stops the loop. To carry on after any stop or restart, run the same command again; the config and the tickets carry the state.
