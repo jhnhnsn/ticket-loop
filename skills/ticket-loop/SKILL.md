@@ -45,7 +45,11 @@ Usage    [████░░░░░░] 6.1% of the week today, cap 14.3%
 
   The labels are padded so both lines' second columns line up: `Tickets` then two spaces, `Usage` then four.
 
-They show at the start of a run, in step 2's preview, and at every hand-back, under its reports (step 4): before a decision's question (step 5), and before a handover's fresh coordinator (step 6), which shows nothing else of the preview.
+Read them before you write anything for the moment they show, and print them:
+
+- at the start of a run, in step 2's preview, after the coordinator's dispatch;
+- at a **decision needed** or a **stop condition** hand-back, under its reports (step 4), so before a decision's question (step 5);
+- at a **budget reached** hand-back, under its reports in step 6's "took over" message, after the fresh coordinator's dispatch. A handover shows nothing else of the preview.
 
 ## Steps
 
@@ -76,11 +80,16 @@ They show at the start of a run, in step 2's preview, and at every hand-back, un
 
 3. **While it runs**, the main thread is the user's: answer what they ask as usual. The coordinator's tests and commits see the working tree, so code edits during a run belong in a worktree: make none yourself for the loop, and if the user asks for some, suggest a worktree. Asked "how's the agent doing?", answer from the coordinator's latest state without disturbing it: the tail of its transcript (the output file its dispatch named), the tracker and `git log`. Don't send it a message for this.
 
-4. **Show the hand-back.** Show the user each ticket's report it carries (what shipped, decisions they answered and any taken on their behalf, tickets filed). Under the reports, write out the two progress bars as text, read fresh (see Progress above), whichever kind of hand-back it is. Keep none of the coordinator's working detail.
+4. **Show the hand-back.** Each ticket's report it carries (what shipped, decisions they answered and any taken on their behalf, tickets filed), with the two progress bars under the reports, read fresh (see Progress above). For **decision needed** or a **stop condition**, write them out as text now. For **budget reached**, read the bars now but write nothing yet: step 6's message carries the reports and bars, after the dispatch. Keep none of the coordinator's working detail.
 
 5. **Relay a decision.** When the hand-back is **decision needed**, ask the user with AskUserQuestion: the ticket in the question, the options with the recommendation first (marked as recommended). Record their answer on the ticket as a comment, as the config's tracker says. Then resume the same coordinator with SendMessage, to the agent ID its dispatch returned, with the answer and a pointer to the comment, and end your turn: its next hand-back wakes you, and you go back to step 4. Don't dispatch a new coordinator for this. Without AskUserQuestion (a headless run), treat it as a stop instead: give the ticket, the options and the recommendation, recommendation first; the user records their answer on the ticket, and running the same command again carries on from it.
 
-6. **Hand over.** When the hand-back is **budget reached**, its next ticket shows the frontier still has a ready one: without asking, dispatch a fresh coordinator with step 2's Agent call, numbered one up (`ticket-loop: M1 coordinator 2`), with the same budget, roles line and offer answers, and without the preview, which the first coordinator's message already gave. It rebuilds the frontier from the tracker. For named tickets, its brief names only those not yet shipped, in the original order. In place of step 2's line to the user, say in one line which coordinator took over, with any skipped tickets or ready-for-human notes the hand-back carried. End your turn: its hand-back wakes you.
+6. **Hand over.** When the hand-back is **budget reached**, its next ticket shows the frontier still has a ready one: without asking, dispatch a fresh coordinator with step 2's Agent call, numbered one up (`ticket-loop: M1 coordinator 2`), with the same budget, roles line and offer answers, and without the preview, which the first coordinator's message already gave. It rebuilds the frontier from the tracker. For named tickets, its brief names only those not yet shipped, in the original order. Write nothing to the user before the dispatch. Once the call returns, tell the user, in place of step 2's message, in one message, in this order:
+   - the hand-back's reports (step 4);
+   - the two progress bars step 4 read;
+   - one line saying which coordinator took over, with any skipped tickets or ready-for-human notes the hand-back carried.
+
+   As with step 2's preview, write it all out as text every time, in a headless run too: lines worked out in your thinking aren't shown. End your turn: its hand-back wakes you.
 
 7. **Show the stop.** When the hand-back is a **stop condition**, show it, with what the user needs to know or do, then what's next. The run ends here:
    - **The daily cap:** step 4's Usage bar gives today's use and the cap, so don't repeat the coordinator's figures; give the ticket in hand and where it stands. To go on today, the user raises the cap in the loop config; otherwise the run waits for tomorrow.
