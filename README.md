@@ -83,10 +83,12 @@ yours, and stops only when it needs you and at the end of each milestone.
    the report for each ticket shipped since the last, in a few lines: what shipped, the
    decisions you answered and any taken on your behalf, tickets filed, what's next. Under the
    reports come the Tickets and Usage bars again, read fresh from the tracker and tokencount,
-   so you see the run's progress partway through: before the question for a decision, and
-   for a handover in the message saying which coordinator took over, once the fresh one has
-   started, which doesn't repeat the rest of the preview. Ask "how's the agent doing?" in the
-   main thread at any time. Push and publish commands ask permission in your main session,
+   so you see the run's progress partway through. For a decision they come after you answer,
+   in the message saying your answer is recorded on the ticket and the coordinator resumed
+   (a headless run, where the decision is a stop, shows them with the question). For a
+   handover they come in the message saying which coordinator took over, once the fresh one
+   has started, which doesn't repeat the rest of the preview. Ask "how's the agent doing?" in
+   the main thread at any time. Push and publish commands ask permission in your main session,
    naming the agent, unless your settings allow them; allow them to keep the loop unattended.
 
 ## First run
