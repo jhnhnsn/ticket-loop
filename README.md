@@ -57,9 +57,10 @@ yours, and stops only when it needs you and at the end of each milestone.
 
 6. **Let it work.** The coordinator runs in the background, labelled with what it runs
    (`ticket-loop: #82 coordinator 1`), and your main thread is free for other work meanwhile.
-   Before it starts, the main thread says how big the run is (`M1: 7 ready, about 2
-   coordinators.`) and how each role will run, model and effort (see [Models](#models)). Each coordinator ships at most the config's **ticket budget**, or fewer if
-   a ticket ran heavy, then hands back, and the main thread starts a fresh one
+   As it starts, the main thread says how big the run is (`M1: 7 ready, about 2
+   coordinators.`) and how each role runs, model and effort (see [Models](#models)).
+   Each coordinator ships at most the config's **ticket budget**, or fewer if a ticket ran
+   heavy, then hands back, and the main thread starts a fresh one
    (`ticket-loop: M1 coordinator 2`) without asking, so no coordinator's context grows too
    large. At each hand-back, handovers included, the main thread shows the report for each
    ticket shipped since the last, in a few lines: what shipped, the decisions you answered
@@ -178,7 +179,7 @@ is why that review stays on the stronger model.
 Each role's **effort** comes from the config too, next to its model, and is passed to the
 subagent's dispatch (`low`, `medium`, `high`, `xhigh`, `max`). The defaults, which a config
 without efforts uses without asking: **implementer `low`, coordinator `medium`, Spec reviewer
-`high`**, and the Standards reviewer at its usual effort (`usual`: dispatched without one). The
+`high`**, and the Standards reviewer at `usual` (dispatched without an effort parameter). The
 Spec reviewer is where real bugs turn up, so it stays thorough while the implementer runs light.
 The trade-off: each ticket gets one fix pass that isn't reviewed again, so what a low-effort
 implementer misses either lands in a low-effort fix pass or becomes a follow-up ticket. Raise
@@ -190,7 +191,7 @@ config's Models section:
 - Standards reviewer: Sonnet, low effort.
 ```
 
-Before each run, the main thread previews every role as the run will use them, defaults
+When a run starts, the main thread previews every role as the run uses them, defaults
 applied, under the ready count:
 
 ```
@@ -198,8 +199,9 @@ M1: 7 ready, about 2 coordinators.
 Coordinator: Opus, medium · Implementer: Opus, low · Standards reviewer: Sonnet, usual · Spec reviewer: Opus, high
 ```
 
-Per-role effort needs Claude Code 2.1.292 or later. A model without the level asked for runs
-the highest one below it, and `CLAUDE_CODE_EFFORT_LEVEL`, if set, overrides every role's.
+Per-role effort needs Claude Code 2.1.292 or later. A model runs the highest level it supports
+at or below the one asked for, and some older models don't support effort at all (see Claude
+Code's model configuration docs). `CLAUDE_CODE_EFFORT_LEVEL`, if set, overrides every role's.
 
 ## Tips
 
