@@ -10,7 +10,7 @@ Read what the repo already says: CLAUDE.md (or AGENTS.md), `docs/agents/*` (the 
 
 Call the Skill tool with `mattpocock-skills:grilling`. The design tree's root questions are these, each asked with your drafted answer as the recommendation, so "yes" accepts it:
 
-1. **Tickets:** where they live; how a parent (milestone, spec, map issue) holds its tickets; how blocking is recorded; the labels for ready-for-agent and ready-for-human.
+1. **Tickets:** where they live; how a parent (milestone, spec, map issue) holds its tickets; how blocking is recorded; the labels for ready-for-agent and ready-for-human; the **read command** that prints a ticket and its comments without a terminal (for GitHub, `gh issue view <n> --json title,body,labels,comments`, never `--comments`, which prints nothing when stdout isn't a terminal).
 2. **Order:** which parent to work, and the order inside it (the parent's order, ticket number, priority label).
 3. **Checks:** the command that runs the automated checks and tests.
 4. **Test queue:** what gets run or playtested by hand (an app, a game, a simulator, a page), with which tools; any temporary settings a test needs and how they're undone; what a test plan must measure.
@@ -30,7 +30,7 @@ Done when the grilling's frontier is empty and the user confirms the answers.
 
 ## 3. Write it
 
-Write `docs/agents/ticket-loop.md` with one short section per question above, in that order, each the confirmed answer in a few lines: commands in backticks, files as paths, no rationale beyond a clause. In the Test queue section, list the test hooks the app has. Add a pointer line to CLAUDE.md's agent docs (`Ticket loop: see docs/agents/ticket-loop.md`). Commit both. To change the config later, edit the file; to redo it, delete it and run the loop again.
+Write `docs/agents/ticket-loop.md` with one short section per question above, in that order, each the confirmed answer in a few lines: commands in backticks, files as paths, no rationale beyond a clause. The Tickets section has a line `Read a ticket: <read command>.` In the Test queue section, list the test hooks the app has. Add a pointer line to CLAUDE.md's agent docs (`Ticket loop: see docs/agents/ticket-loop.md`). Commit both. To change the config later, edit the file; to redo it, delete it and run the loop again.
 
 ## 4. Prove the loop closes
 

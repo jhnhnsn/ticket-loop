@@ -6,6 +6,8 @@ How `/ticket-loop:ticket-loop` finds, builds, tests, ships and records this repo
 
 GitHub issues in `jhnhnsn/ticket-loop` (see `docs/agents/issue-tracker.md`). A parent is an issue whose sub-issues are its tickets, or a milestone by name. Blocking is GitHub's native issue dependencies. Labels: `ready-for-agent`, `ready-for-human`.
 
+Read a ticket: `gh issue view <n> --repo jhnhnsn/ticket-loop --json title,body,labels,comments`, never `--comments`.
+
 ## Order
 
 Next is the first open sub-issue, in the parent's sub-issue order, whose blockers are all closed. With no argument, work the oldest open parent issue that has sub-issues.

@@ -18,7 +18,17 @@ The user watches you through your transcript, which they can open in the agent v
 
 Matt Pocock's skills are named in full (`mattpocock-skills:tdd`), since a bare name can load another skill of the same name.
 
-The **loop config**, `docs/agents/ticket-loop.md`, says how this project's tickets are found, built, tested, shipped and written up: the tracker, the checks command, the test queue, the reference to stay faithful to, the ship and changelog steps, the models and efforts per role. Every step below reads it. Your brief gives the **roles line**: each role's model and effort, with the config's defaults already applied (the launcher's Roles section, [`skills/ticket-loop/SKILL.md`](../skills/ticket-loop/SKILL.md), says how). Dispatch each role as it says. Communicate with subagents through **context pointers** (ticket numbers, the loop config, CLAUDE.md, earlier commits as patterns), not copies.
+The **loop config**, `docs/agents/ticket-loop.md`, says how this project's tickets are found, built, tested, shipped and written up: the tracker, the checks command, the test queue, the reference to stay faithful to, the ship and changelog steps, the models and efforts per role. Every step below reads it. Your brief gives the **roles line**: each role's model and effort, with the config's defaults already applied (the launcher's Roles section, [`skills/ticket-loop/SKILL.md`](../skills/ticket-loop/SKILL.md), says how). Dispatch each role as it says. Communicate with subagents through **context pointers** (ticket numbers, the loop config, CLAUDE.md, earlier commits as patterns), not copies. Read a ticket and its comments with the read command in the config's Tickets section (for GitHub, `gh issue view <n> --json title,body,labels,comments`, never `--comments`, which prints nothing when stdout isn't a terminal).
+
+## Bash rules
+
+Headless runs check every Bash call against narrow permission rules, and a command they can't check is refused. You follow these rules, and every implementer and reviewer brief passes them on, in full:
+
+- Change files with Edit or Write, never with shell redirects, heredocs or scripts (`printf >> CHANGELOG.md`, `python3 - <<'E' … open(p).write(…)`).
+- One plain command per Bash call: no `;` or `&&` chains, `for` loops, variables, `$?`, or pipes into `head`/`tail`. Name another repo with `git -C <path>` or `gh --repo`, never `cd`.
+- Read a ticket with the config's read command, never `gh issue view --comments`.
+- Run tokencount as its skill says (`python3 "<path>/tokencount" --json`), never as a bare `tokencount`.
+- A refused command means rewrite it simpler and try again: Bash is still available. Hand back "something only you can do" only after a plain single command is refused too.
 
 ## Dispatch
 
@@ -37,7 +47,8 @@ Verified on Claude Code 2.1.316; see [ADR-0001](../docs/adr/0001-coordinator-dis
 
 **Effort.** Every subagent you dispatch gets its role's effort from your roles line as the Agent tool's `effort` parameter: the config is the user's explicit choice of effort, so pass it. A role at `usual` is dispatched without one. A fresh implementer, after a failure, a decision or for the review fixes, gets the implementer's effort as the first did. Check the effort with the label before every dispatch.
 
-2. **Implement.** Dispatch one implementer subagent labelled `#<ticket> implement: <short title>` (general-purpose, on the implementer's model and effort from your roles line, in the mode **Dispatch** above picks) with a brief that points at: the ticket and its comments; the loop config, CLAUDE.md and the agent docs; the reference the config names; the previous ticket's commit as a pattern; and any local work on this ticket from an earlier run (check `git log` for unpushed commits that close it, and `git status` for uncommitted changes), to build on. Its rules:
+2. **Implement.** Dispatch one implementer subagent labelled `#<ticket> implement: <short title>` (general-purpose, on the implementer's model and effort from your roles line, in the mode **Dispatch** above picks) with a brief that points at: the ticket and its comments, read with the config's read command; the loop config, CLAUDE.md and the agent docs; the reference the config names; the previous ticket's commit as a pattern; and any local work on this ticket from an earlier run (check `git log` for unpushed commits that close it, and `git status` for uncommitted changes), to build on. Its rules:
+   - The Bash rules (see Bash rules), in full.
    - Build it with the Skill tool's `mattpocock-skills:tdd`, at the seams the ticket names (it can't confirm seams with the user, so the ticket's are agreed).
    - Run the config's checks often. It doesn't run or playtest the app itself: that's the test queue's.
    - If the test plan needs a test hook the app lacks (a way to reach a state, or to read a value), build the hook as part of the ticket, and add it to the config's Test queue list.
@@ -50,7 +61,7 @@ Verified on Claude Code 2.1.316; see [ADR-0001](../docs/adr/0001-coordinator-dis
 
 3. **Decide.** For a decision that's the user's, hand back **decision needed**, as Hand-back says. Don't take it on their behalf. The launcher asks the user, records the answer on the ticket as a comment, and resumes you with SendMessage, carrying the answer. Then send the answer to the same implementer with SendMessage if it had done real work, or dispatch a fresh background one from the updated ticket if it stopped early, labelled as the first was. The same-implementer path is unverified: if SendMessage fails or isn't available, dispatch a fresh background implementer instead, labelled as the first, pointed at the ticket's comments and the work so far, and say so in your next hand-back. Note the decision for the ticket's report, and go back to step 2's wait.
 
-4. **Test and review.** Put the ticket on the test queue, and dispatch two fresh reviewer subagents in parallel, labelled `#<ticket> standards review` and `#<ticket> spec review`, once per ticket, as the `mattpocock-skills:code-review` skill describes (Standards and Spec, each on its model and effort from your roles line; not Claude Code's built-in `code-review`, which is a different review), on the implementer's commit (its diff against the commit before it), so the review isn't anchored on the implementer's view. **Dispatch** above says whether the tests run alongside the reviews or before or after them.
+4. **Test and review.** Put the ticket on the test queue, and dispatch two fresh reviewer subagents in parallel, labelled `#<ticket> standards review` and `#<ticket> spec review`, once per ticket, as the `mattpocock-skills:code-review` skill describes (Standards and Spec, each on its model and effort from your roles line; not Claude Code's built-in `code-review`, which is a different review), on the implementer's commit (its diff against the commit before it), so the review isn't anchored on the implementer's view. Each reviewer's brief carries the Bash rules (see Bash rules) in full, and points at the ticket through the config's read command. **Dispatch** above says whether the tests run alongside the reviews or before or after them.
    - **Test queue:** you run each test plan yourself, one ticket at a time, as the config says, saying what you're about to run so the user can follow it in your transcript, and undo any temporary test settings afterwards. Record what you measured against what the plan expected. A failure goes back to the implementer with what you saw.
    - Send all the reviewers' findings to the implementer in one go, to fix in a single pass: fix what's right, push back on what's wrong, and file tickets for anything pre-existing or out of scope. Check the fixes yourself, without a second review: re-run the checks and the affected steps of the test plan, and read the fix diff to judge the report. Anything that turns up after that becomes a new ticket, not another round.
 
@@ -99,7 +110,7 @@ Hand back, saying why, when:
 - the parent's last ticket has shipped: the milestone is done. Write its summary where the config says and commit it, say what shipped and what is left for the user (ready-for-human tickets), and end the run there, even when the next milestone's tickets are ready; suggest `/to-spec`, `/to-tickets` or `/grill-with-docs` if it has none;
 - the last named ticket has shipped, or the rest were skipped: say what shipped and what was skipped and why. If that finished the tickets' parent, the milestone stop above applies too;
 - the frontier is empty with tickets still open (all blocked, or ready-for-human): say what blocks them;
-- something only the user can do: a click in a running app, a device check, credentials, a stuck tool;
+- something only the user can do: a click in a running app, a device check, credentials, a stuck tool (a refused Bash command isn't one until a plain single command is refused too; see Bash rules);
 - a push, publish or check fails in a way a fix can't safely cover;
 - the user answers **stop here** to a cap reached hand-back (see Daily cap);
 - anything else the config lists as a stop.
