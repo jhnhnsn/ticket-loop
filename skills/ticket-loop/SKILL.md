@@ -35,13 +35,17 @@ Tickets  [███░░░░░░░] 3 of 10 shipped
 Usage    [████░░░░░░] 6.1% of the week today, cap 14.3%
 ```
 
-- **Tickets:** for a parent, its tickets (an issue's sub-issues, or a milestone's issues), open or closed, are the total; the closed ones are shipped. For named tickets, the total is the tickets named, and the shipped are the named ones that are closed. The bar fills as shipped out of the total.
-- **Usage:** today's `today.percent_of_week` from the Skill tool's `tokencount:tokencount` `--json` report, read as the coordinator's Daily cap section reads it ([`agents/coordinator.md`](../../agents/coordinator.md)), to one decimal, against the config's Daily cap. The bar fills as a share of the cap, and is full at or over it. The bars never stop the run: the coordinator's own cap check does that.
+- **Tickets:** for a parent, its tickets (an issue's sub-issues, or a milestone's issues), open or closed, are the total; the closed ones are shipped. For named tickets, the total is the tickets the user named for the run, and the shipped are the named ones that are closed; after a handover, the total is still the run's original named set, not the fresh coordinator's shorter list.
+- **Usage:** today's `today.percent_of_week` from the Skill tool's `tokencount:tokencount` `--json` report, read as the coordinator's Daily cap section reads it ([`agents/coordinator.md`](../../agents/coordinator.md)), to one decimal, against the config's Daily cap. The bars never stop the run: the coordinator's own cap check does that.
   - **Cap not applicable** (the config's Daily cap says so): `Usage    not applicable (no plan usage to read)`, with no bar and no tokencount read.
   - **Unreadable** (tokencount isn't installed, its `usage_source` is `unavailable`, or `today.percent_of_week` is null): `Usage    can't read today's usage`, with no bar.
-- **Bars** are 10 cells wide, `█` filled and `░` empty, rounded to the nearest cell (3 of 10 fills 3; 6.1% of a 14.3% cap fills 4). The labels are padded so both lines' second columns line up: `Tickets` then two spaces, `Usage` then four.
+- **Bars** are 10 cells wide, the filled cells `█` first, then the empty `░`, so filled + empty = 10. Work out the filled cells from this reading's numbers every time, and draw the bar anew; never copy an earlier bar, even when only the count changed:
+  - **Tickets:** filled = round(10 × shipped ÷ total), halves up (0 when the total is 0). 3 of 10 fills 3; 1 of 3 fills 3; 2 of 3 fills 7 (`[███████░░░]`); 3 of 3 fills 10.
+  - **Usage:** filled = round(10 × use ÷ cap), halves up, at most 10. 6.1% of a 14.3% cap fills 4; 4.0% fills 3; 16.0% fills 10.
 
-Step 2's preview shows them at the start of a run, and step 4 at every hand-back.
+  The labels are padded so both lines' second columns line up: `Tickets` then two spaces, `Usage` then four.
+
+They show at the start of a run, in step 2's preview, and at every hand-back, under its reports (step 4): before a decision's question (step 5), and before a handover's fresh coordinator (step 6), which shows nothing else of the preview.
 
 ## Steps
 
@@ -49,10 +53,10 @@ Step 2's preview shows them at the start of a run, and step 4 at every hand-back
 
 1. **Resolve the argument.** Work out from the config's tracker what the run is: a parent, or the tickets named, in the order given. With no argument, take the parent the config says to work next, and say which. Check each issue or milestone exists; if one doesn't, say so and stop, dispatching nothing. Then ask the config's offers, since the coordinator can't ask: where the config offers parallel worktrees and the run has two or more ready tickets that don't block each other, ask the user to accept or decline. Then count the run for step 2's preview:
    - **Ready count:** its ready tickets (the open ready-for-agent tickets under the parent, blocked or not, since blockers ship as the run goes; or the named tickets that are open and ready-for-agent), then the coordinators they take: the count divided by the ticket budget, rounded up, at least 1 (`M1: 7 ready, about 2 coordinators.`; `#82: 1 ready, about 1 coordinator.`). The ticket budget is the config's Ticket budget; a config without one uses 4, without asking.
-   - **Progress:** the two progress bars (see Progress above), read from the tracker and tokencount now.
+   - **Progress:** the two progress bars (see Progress above).
    - **Roles:** the roles line (see Roles above).
 
-   Done when you can name the run (`M1`, `#120`, `#82 #84`), the offers are answered and you have the preview's four lines.
+   Done when you can name the run (`M1`, `#120`, `#82 #84`), the offers are answered and you have the preview's lines: the ready count, the two bars and the roles line.
 
 2. **Dispatch the coordinator.** Use the Agent tool with `subagent_type` `ticket-loop:coordinator`, in the background, on the coordinator's model, passed as an alias (`opus`, `sonnet`, `haiku`, `fable`), and with the coordinator's effort as the Agent tool's `effort` parameter, both as the roles line gives them (an effort of `usual`: leave `effort` out). Label it (the Agent tool's `description`) `ticket-loop: <what it runs> coordinator <n>`: the run as step 1 named it, and `<n>` counting this run's coordinators from 1 (`ticket-loop: M1 coordinator 1`, `ticket-loop: #82 #84 coordinator 1`). The `ticket-loop:` prefix sets it apart from the per-ticket subagents it dispatches. Its brief names the run (the parent, or the tickets in order), gives the ticket budget, the roles line and the user's answers to the offers, and points at the loop config.
 
@@ -72,14 +76,14 @@ Step 2's preview shows them at the start of a run, and step 4 at every hand-back
 
 3. **While it runs**, the main thread is the user's: answer what they ask as usual. The coordinator's tests and commits see the working tree, so code edits during a run belong in a worktree: make none yourself for the loop, and if the user asks for some, suggest a worktree. Asked "how's the agent doing?", answer from the coordinator's latest state without disturbing it: the tail of its transcript (the output file its dispatch named), the tracker and `git log`. Don't send it a message for this.
 
-4. **Show the hand-back.** Show the user each ticket's report it carries (what shipped, decisions they answered and any taken on their behalf, tickets filed). Under the reports, show the two progress bars (see Progress above), read fresh now from the tracker and tokencount, so they count the tickets shipped and today's usage since the last ones. Every hand-back gets them, **decision needed**, **budget reached** and a **stop condition** alike, written out as text as the preview is: before step 5's question, and before step 6's fresh coordinator. Keep none of the coordinator's working detail.
+4. **Show the hand-back.** Show the user each ticket's report it carries (what shipped, decisions they answered and any taken on their behalf, tickets filed). Under the reports, write out the two progress bars as text, read fresh (see Progress above), whichever kind of hand-back it is. Keep none of the coordinator's working detail.
 
 5. **Relay a decision.** When the hand-back is **decision needed**, ask the user with AskUserQuestion: the ticket in the question, the options with the recommendation first (marked as recommended). Record their answer on the ticket as a comment, as the config's tracker says. Then resume the same coordinator with SendMessage, to the agent ID its dispatch returned, with the answer and a pointer to the comment, and end your turn: its next hand-back wakes you, and you go back to step 4. Don't dispatch a new coordinator for this. Without AskUserQuestion (a headless run), treat it as a stop instead: give the ticket, the options and the recommendation, recommendation first; the user records their answer on the ticket, and running the same command again carries on from it.
 
-6. **Hand over.** When the hand-back is **budget reached**, its next ticket shows the frontier still has a ready one: without asking, dispatch a fresh coordinator with step 2's Agent call, numbered one up (`ticket-loop: M1 coordinator 2`), with the same budget, roles line and offer answers, and without the preview, which the first coordinator's message already gave: step 4's bars are all this handover shows of it. It rebuilds the frontier from the tracker. For named tickets, its brief names only those not yet shipped, in the original order. In place of step 2's line to the user, say in one line which coordinator took over, with any skipped tickets or ready-for-human notes the hand-back carried. End your turn: its hand-back wakes you.
+6. **Hand over.** When the hand-back is **budget reached**, its next ticket shows the frontier still has a ready one: without asking, dispatch a fresh coordinator with step 2's Agent call, numbered one up (`ticket-loop: M1 coordinator 2`), with the same budget, roles line and offer answers, and without the preview, which the first coordinator's message already gave. It rebuilds the frontier from the tracker. For named tickets, its brief names only those not yet shipped, in the original order. In place of step 2's line to the user, say in one line which coordinator took over, with any skipped tickets or ready-for-human notes the hand-back carried. End your turn: its hand-back wakes you.
 
 7. **Show the stop.** When the hand-back is a **stop condition**, show it, with what the user needs to know or do, then what's next. The run ends here:
-   - **The daily cap:** give today's use, the cap, and the ticket in hand and where it stands. To go on today, the user raises the cap in the loop config; otherwise the run waits for tomorrow.
+   - **The daily cap:** step 4's Usage bar gives today's use and the cap, so don't repeat the coordinator's figures; give the ticket in hand and where it stands. To go on today, the user raises the cap in the loop config; otherwise the run waits for tomorrow.
    - Anything else: as the coordinator said it.
 
 Stopping the coordinator in the agent list stops the loop. To carry on after any stop or restart, run the same command again; the config and the tickets carry the state.
