@@ -2,6 +2,10 @@
 
 What changes for you, the person running the loop, newest first.
 
+## Unreleased
+
+- A researcher maps each ticket before its first implementer. It's a cheap, read-only fifth role (Haiku at usual effort unless your config's Models section names a `Researcher:`), shown in the preview's roles line. Its note of at most 300 words, with `path:line` pointers, is posted on the ticket as `Research note (#<ticket> research)`, and the implementer starts from it. If research fails or the note runs long, the ticket goes ahead without it, and each ticket's report says how many research passes ran. ([#30](https://github.com/jhnhnsn/ticket-loop/issues/30))
+
 ## 1.13.0
 
 The daily cap can roll over unused days in the usage week, and commits follow your config's attribution rule over the session's default. Published on its own, between milestones.
