@@ -72,12 +72,17 @@ yours, and stops only when it needs you and at the end of each milestone.
    closed; run with tickets, the named ones that are closed, out of those named. **Usage** is
    how much of your plan's week today has used (tokencount's `today.percent_of_week`) against
    the config's daily cap. With a rolling cap it's the week's use so far (`week.percent_used`)
-   against the allowance, the daily share × the day of the usage week (24-hour days from the week's start, not calendar dates):
-   `Usage    [█████░░░░░] 15.0% of the week so far, allowance 28.6% (day 2 of 7)`. Either way
-   the bar fills as a share of the limit: full at or over it, when
-   the coordinator's next cap check hands back to ask you. Without plan usage to read (the config
-   marks the cap not applicable) it says `not applicable (no plan usage to read)`, and if
-   tokencount can't tell, `can't read today's usage`, which hands back the same way.
+   against the allowance, the daily share × the day of the usage week, counted in 24-hour days
+   from the week's start. Either way the bar fills as a share of the limit: full at or over it,
+   when the coordinator's next cap check hands back to ask you. A rolling cap's line reads:
+
+   ```
+   Usage    [█████░░░░░] 15.0% of the week so far, allowance 28.6% (day 2 of 7)
+   ```
+
+   Without plan usage to read (the config marks the cap not applicable) it says
+   `not applicable (no plan usage to read)`, and if tokencount can't tell,
+   `can't read today's usage`, which hands back the same way.
 
    Each coordinator ships at most the config's **ticket budget**, or fewer if a ticket ran
    heavy, then hands back, and the main thread starts a fresh one
@@ -190,13 +195,14 @@ for each ticket it worked.
 - **The daily cap is reached.** Before each dispatch and each ship, the loop checks how much of
   your plan's weekly usage today has taken (a **per day** cap, where unused allowance is lost at
   midnight), or, with a **rolling** cap, how much the week has taken against the daily share ×
-  the day of the usage week (a light day leaves more for the next). A config that doesn't say
-  is per day. At the limit, or if it can't tell, it dispatches and ships nothing and asks you,
+  the day of the usage week (a light day leaves more for the next). A Daily cap that doesn't
+  start with `Rolling:` is per day. At the limit, or if it can't tell, it dispatches and ships nothing and asks you,
   with the use, the limit (and, rolling, the day) and where the ticket in hand stands:
   **stop here** (the ticket stays as it is, and it says what's committed locally), **finish this
   ticket or one more** (then it asks again), or **keep going today** (not asked again today,
   even by the next coordinator). In a headless run it can't ask, so it stops there: raise the
-  cap in the loop config, or run it interactively, to go on today; otherwise run it tomorrow.
+  cap in the loop config, or run it interactively, to go on today; otherwise run it once the limit grows: tomorrow for a per day cap, or
+  for a rolling one at the week's reset time each day, when the allowance grows by a day's share.
 - Anything else your config lists.
 
 ## Models

@@ -102,16 +102,16 @@ The loop never goes past the user's **daily cap** (the share of their plan's wee
 
 The config's Daily cap section names its **mode**. Each mode reads a **use** and a **limit** from the report:
 
-- **Per day** (the section says `per day`, or doesn't name a mode): use is `today.percent_of_week` (how much of the week's usage today has taken since local midnight); limit is the daily share.
-- **Rolling** (the section says `rolling`): use is `week.percent_used` (the week's usage so far); limit is the **allowance**, the daily share × the **day of the usage week**, at most 100%. The usage week ends at `week.resets_at` and starts 7 days before it (`week.window_start`). Days are 24-hour periods from that start, not calendar dates: day = the whole 24-hour periods elapsed since the start, plus 1, at most 7. With a 14.3% share, day 1 allows 14.3%, day 2 28.6%, day 3 42.9%, day 7 100%. Example: a start of 2026-11-03T07:00Z makes 2026-11-04T23:00Z (40 hours on) day 2 (allowance 28.6%), and 2026-11-05T07:00Z day 3. Compute the allowance with the share's exact value, then show it to one decimal.
+- **Rolling** (the section's text starts with `Rolling:`): use is `week.percent_used` (the week's usage so far); limit is the **allowance**, the daily share × the **day of the usage week**, at most 100%. The usage week ends at `week.resets_at` and starts exactly 7 days before it. Days are 24-hour periods from that start, not calendar dates: day = the whole 24-hour periods elapsed since the start, plus 1, at least 1 and at most 7. So the allowance grows by the daily share each day at the week's reset time.
+- **Per day** (any other text, as every config before rolling has): use is `today.percent_of_week` (how much of the week's usage today has taken since local midnight); limit is the daily share. With a 14.3% share, day 1 allows 14.3%, day 2 28.6%, day 3 42.9%, day 7 100%. Example: a start of 2026-11-03T07:00Z makes 2026-11-04T23:00Z (40 hours on) day 2 (allowance 28.6%), and 2026-11-05T07:00Z day 3. Compute the allowance with the share's exact value, then show it to one decimal.
 
 The **verdict** compares the two:
 
 - **Under the limit** (use < limit): carry on.
 - **At or over the limit, or unreadable** (tokencount isn't installed or isn't available, its `usage_source` is `unavailable`, or the mode's fields are null: `today.percent_of_week` per day; `week.percent_used` or `week.resets_at` rolling): dispatch nothing and ship nothing. Hand back **cap reached** (see Hand-back). The launcher asks the user and resumes you with the answer:
   - **Stop here:** dispatch and ship nothing more. Leave the ticket in hand as it is, and hand back a stop condition saying what's committed locally and not pushed, and what's left in the tree; a later run picks it up.
-  - **Finish this ticket or one more:** carry on without the check until one more ticket ships: the ticket in hand, or, with none in hand, the next one. Then the check applies again, and at the cap you hand back **cap reached** again.
-  - **Keep going today:** skip the check for the rest of that day: while today's local date (`date +%F`) is the date the launcher recorded with the answer, in its message or your brief. From the next date on, check again. A brief that says the user chose to keep going today means the same: skip the check that day, without handing back for it.
+  - **Finish this ticket or one more:** carry on without the check until one more ticket ships: the ticket in hand, or, with none in hand, the next one. Then the check applies again, and at or over the limit you hand back **cap reached** again.
+  - **Keep going today:** skip the check for the rest of that day: while today's local date (`date +%F`) is the date the launcher recorded with the answer, in its message or your brief. From the next date on, check again. A brief that says the user chose to keep going today means the same: skip the check that day, without handing back for it. This holds in both modes: keep going today follows the local date, not the rolling cap's 24-hour days.
 
 If the config marks the cap not applicable (no plan usage to read, as with an API key), skip the check.
 
