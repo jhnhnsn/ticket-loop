@@ -2,7 +2,9 @@
 
 What changes for you, the person running the loop, newest first.
 
-## Unreleased
+## 1.12.0
+
+Headless and unattended runs survive refused Bash commands: every agent makes one plain call at a time and reads tickets with `--json`. Published on its own, between milestones.
 
 - Headless runs no longer stop on refused Bash commands. Every agent in the run, the launcher included, changes files with Edit or Write and makes one plain Bash call at a time, with no chains, loops or pipes. When a command is refused, it retries a simpler one instead of telling you Bash is unavailable. Tickets are read with the command the config's Tickets section names, which setup now writes (for GitHub, `gh issue view <n> --json …`, since `--comments` prints nothing headless). A headless decision or cap stop now ends with one message: every ticket shipped this run, then the bars, then the decision. ([#26](https://github.com/jhnhnsn/ticket-loop/issues/26))
 
