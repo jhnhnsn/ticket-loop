@@ -119,7 +119,7 @@ question carrying its drafted answer so "yes" accepts it:
 | Models | the model and effort for the coordinator, the implementer, the Standards reviewer and the Spec reviewer |
 | Commits | message style, closing keyword, attribution lines |
 | Concurrency | one ticket at a time, or parallel worktrees |
-| Daily cap | the share of your plan's weekly usage one day may take (one day's share, 14.3%, by default), and whether it's rolling or per day (per day if it doesn't say) |
+| Daily cap | the share of your plan's weekly usage one day may take (one day's share, 14.3%, by default), and whether it's rolling or per day (rolling if its text starts with `Rolling:`, otherwise per day) |
 | Ticket budget | the most tickets one coordinator ships before a fresh one takes over (4 by default) |
 
 The answers go to **`docs/agents/ticket-loop.md`**, the loop config, with a pointer line in
@@ -196,13 +196,15 @@ for each ticket it worked.
   your plan's weekly usage today has taken (a **per day** cap, where unused allowance is lost at
   midnight), or, with a **rolling** cap, how much the week has taken against the daily share ×
   the day of the usage week (a light day leaves more for the next). A Daily cap that doesn't
-  start with `Rolling:` is per day. At the limit, or if it can't tell, it dispatches and ships nothing and asks you,
-  with the use, the limit (and, rolling, the day) and where the ticket in hand stands:
+  start with `Rolling:` is per day. At the limit, or if it can't tell, it dispatches and ships
+  nothing and asks you, with the use, the limit (and, rolling, the day) and where the ticket in
+  hand stands:
   **stop here** (the ticket stays as it is, and it says what's committed locally), **finish this
   ticket or one more** (then it asks again), or **keep going today** (not asked again today,
   even by the next coordinator). In a headless run it can't ask, so it stops there: raise the
-  cap in the loop config, or run it interactively, to go on today; otherwise run it once the limit grows: tomorrow for a per day cap, or
-  for a rolling one at the week's reset time each day, when the allowance grows by a day's share.
+  cap in the loop config, or run it interactively, to go on today; otherwise run it once the
+  limit grows: tomorrow for a per day cap, or for a rolling one at the week's reset time each
+  day, when the allowance grows by a day's share.
 - Anything else your config lists.
 
 ## Models
