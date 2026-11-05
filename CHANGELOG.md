@@ -4,6 +4,7 @@ What changes for you, the person running the loop, newest first.
 
 ## Unreleased
 
+- The daily cap can be rolling: the week's use so far is held to your daily share × the day of the usage week (24-hour days from the week's start), so a light day leaves more for the next. The Usage bar then reads `15.0% of the week so far, allowance 28.6% (day 2 of 7)`. Setup asks rolling or per day, recommending rolling, and writes a rolling cap as `Rolling: …`; a config without that label keeps today's per-day cap unchanged. ([#24](https://github.com/jhnhnsn/ticket-loop/issues/24))
 - Commits in a run follow your loop config's Commits section, even when the session's own default asks for a `Co-Authored-By` line. Where the config says no attribution, no commit carries one, whether the launcher, a coordinator or an implementer made it. ([#27](https://github.com/jhnhnsn/ticket-loop/issues/27))
 
 ## 1.12.0
