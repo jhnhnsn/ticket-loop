@@ -15,7 +15,7 @@ The **loop config**, `docs/agents/ticket-loop.md`, says how this project's ticke
 
 **Bash rules.** You follow the coordinator's Bash rules ([`agents/coordinator.md`](../../agents/coordinator.md), Bash rules), in setup too: change files with Edit or Write, one plain command per Bash call with no chains, loops, variables or pipes of any kind, tickets read with the config's read command, tokencount run as its skill says. A refused command means rewrite it simpler and try again.
 
-**Commit messages.** Your commits (the loop config in setup) follow the coordinator's commit message rule ([`agents/coordinator.md`](../../agents/coordinator.md), Commit messages): the config's Commits section wins over the session's attribution default, so where it says no attribution, a commit carries no `Co-Authored-By` or other attribution line.
+**Commit messages.** Your commits, such as the loop config's in setup, follow the coordinator's commit message rule ([`agents/coordinator.md`](../../agents/coordinator.md), Commit messages).
 
 ## Roles
 
