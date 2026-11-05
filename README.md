@@ -177,8 +177,11 @@ nesting limit.
    ticket at a time, saying what it's about to run. To watch, open the coordinator's
    transcript in the agent view. Meanwhile two fresh reviewer subagents check the commit:
    **Standards** (the repo's conventions) and **Spec** (the ticket and the reference, where
-   real bugs turn up), once per ticket. Failures and findings go back to the implementer, who
-   fixes them all in one follow-up commit carrying the playtest record. The fixes aren't
+   real bugs turn up), once per ticket. Failures and findings go to a fresh implementer, who
+   fixes them all in one follow-up commit carrying the playtest record. Every later implementer
+   on a ticket (for the review fixes, after a test failure, or fresh after a decision) gets its
+   own research pass first, scoped to what it's fixing and posted as a new note naming its
+   purpose (`Research note (#82 research) for the review fixes`). The fixes aren't
    reviewed again: the coordinator re-runs the checks and the affected test steps, and anything
    found later becomes a new ticket, not another round.
 5. **Ship:** the coordinator adds the ticket's changelog entry, commits it, pushes, and
