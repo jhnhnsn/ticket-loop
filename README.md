@@ -181,7 +181,7 @@ nesting limit.
    fixes them all in one follow-up commit carrying the playtest record. Every later implementer
    on a ticket (for the review fixes, after a test failure, or fresh after a decision) gets its
    own research pass first, scoped to what it's fixing and posted as a new note naming its
-   purpose (`Research note (#82 research) for the review fixes`). The fixes aren't
+   purpose (`Research note (#82 research) for the review fixes`). The follow-up fixes aren't
    reviewed again: the coordinator re-runs the checks and the affected test steps, and anything
    found later becomes a new ticket, not another round.
 5. **Ship:** the coordinator adds the ticket's changelog entry, commits it, pushes, and
