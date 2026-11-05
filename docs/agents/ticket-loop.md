@@ -69,4 +69,4 @@ One ticket at a time by default. When the frontier has two or more ready tickets
 
 ## Daily cap
 
-Rolling: 14.3% of the plan's weekly usage per day (one day's share), so the week's use so far (tokencount's `week.percent_used`) may reach 14.3% × the day of the usage week.
+Rolling: 14.3% of the plan's weekly usage per day (one day's share), so the week's use so far (tokencount's `week.percent_used`) may reach 14.3% × the day of the usage week (24-hour days counted from the week's start).

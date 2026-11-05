@@ -72,7 +72,7 @@ yours, and stops only when it needs you and at the end of each milestone.
    closed; run with tickets, the named ones that are closed, out of those named. **Usage** is
    how much of your plan's week today has used (tokencount's `today.percent_of_week`) against
    the config's daily cap. With a rolling cap it's the week's use so far (`week.percent_used`)
-   against the allowance, the daily share × the day of the usage week:
+   against the allowance, the daily share × the day of the usage week (24-hour days from the week's start, not calendar dates):
    `Usage    [█████░░░░░] 15.0% of the week so far, allowance 28.6% (day 2 of 7)`. Either way
    the bar fills as a share of the limit: full at or over it, when
    the coordinator's next cap check hands back to ask you. Without plan usage to read (the config
