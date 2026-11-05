@@ -71,7 +71,10 @@ yours, and stops only when it needs you and at the end of each milestone.
    **Tickets** counts the parent's tickets that are closed, out of all of them, open or
    closed; run with tickets, the named ones that are closed, out of those named. **Usage** is
    how much of your plan's week today has used (tokencount's `today.percent_of_week`) against
-   the config's daily cap, and its bar fills as a share of the cap: full at or over it, when
+   the config's daily cap. With a rolling cap it's the week's use so far (`week.percent_used`)
+   against the allowance, the daily share × the day of the usage week:
+   `Usage    [█████░░░░░] 15.0% of the week so far, allowance 28.6% (day 2 of 7)`. Either way
+   the bar fills as a share of the limit: full at or over it, when
    the coordinator's next cap check hands back to ask you. Without plan usage to read (the config
    marks the cap not applicable) it says `not applicable (no plan usage to read)`, and if
    tokencount can't tell, `can't read today's usage`, which hands back the same way.
@@ -111,7 +114,7 @@ question carrying its drafted answer so "yes" accepts it:
 | Models | the model and effort for the coordinator, the implementer, the Standards reviewer and the Spec reviewer |
 | Commits | message style, closing keyword, attribution lines |
 | Concurrency | one ticket at a time, or parallel worktrees |
-| Daily cap | the share of your plan's weekly usage one day may take (one day's share, 14.3%, by default) |
+| Daily cap | the share of your plan's weekly usage one day may take (one day's share, 14.3%, by default), and whether it's rolling or per day (per day if it doesn't say) |
 | Ticket budget | the most tickets one coordinator ships before a fresh one takes over (4 by default) |
 
 The answers go to **`docs/agents/ticket-loop.md`**, the loop config, with a pointer line in
@@ -185,8 +188,11 @@ for each ticket it worked.
   tool.
 - A push, publish or check fails in a way a fix can't safely cover.
 - **The daily cap is reached.** Before each dispatch and each ship, the loop checks how much of
-  your plan's weekly usage today has taken. At the cap, or if it can't tell, it dispatches and
-  ships nothing and asks you, with today's use, the cap and where the ticket in hand stands:
+  your plan's weekly usage today has taken (a **per day** cap, where unused allowance is lost at
+  midnight), or, with a **rolling** cap, how much the week has taken against the daily share ×
+  the day of the usage week (a light day leaves more for the next). A config that doesn't say
+  is per day. At the limit, or if it can't tell, it dispatches and ships nothing and asks you,
+  with the use, the limit (and, rolling, the day) and where the ticket in hand stands:
   **stop here** (the ticket stays as it is, and it says what's committed locally), **finish this
   ticket or one more** (then it asks again), or **keep going today** (not asked again today,
   even by the next coordinator). In a headless run it can't ask, so it stops there: raise the

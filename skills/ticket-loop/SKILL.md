@@ -39,13 +39,17 @@ Tickets  [███░░░░░░░] 3 of 10 shipped
 Usage    [████░░░░░░] 6.1% of the week today, cap 14.3%
 ```
 
+With a rolling cap, the Usage line reads `Usage    [█████░░░░░] 15.0% of the week so far, allowance 28.6% (day 2 of 7)`.
+
 - **Tickets:** for a parent, its tickets (an issue's sub-issues, or a milestone's issues), open or closed, are the total; the closed ones are shipped. For named tickets, the total is the tickets the user named for the run, and the shipped are the named ones that are closed; after a handover, the total is still the run's original named set, not the fresh coordinator's shorter list.
-- **Usage:** today's `today.percent_of_week` from the Skill tool's `tokencount:tokencount` `--json` report, read as the coordinator's Daily cap section reads it ([`agents/coordinator.md`](../../agents/coordinator.md)), to one decimal, against the config's Daily cap. The bars never stop the run: the coordinator's own cap check does that.
+- **Usage:** the use against the limit from the Skill tool's `tokencount:tokencount` `--json` report, worked out for the config's mode exactly as the coordinator's Daily cap section says ([`agents/coordinator.md`](../../agents/coordinator.md)), each to one decimal. The bars never stop the run: the coordinator's own cap check does that.
+  - **Per day** (the config says `per day`, or names no mode): `Usage    [bar] <today.percent_of_week>% of the week today, cap <share>%`.
+  - **Rolling** (the config says `rolling`): `Usage    [bar] <week.percent_used>% of the week so far, allowance <allowance>% (day <d> of 7)`.
   - **Cap not applicable** (the config's Daily cap says so): `Usage    not applicable (no plan usage to read)`, with no bar and no tokencount read.
-  - **Unreadable** (tokencount isn't installed or isn't available, its `usage_source` is `unavailable`, or `today.percent_of_week` is null): `Usage    can't read today's usage`, with no bar.
+  - **Unreadable** (tokencount isn't installed or isn't available, its `usage_source` is `unavailable`, or the mode's fields are null, as the coordinator's Daily cap section lists them): `Usage    can't read today's usage`, with no bar.
 - **Bars** are 10 cells wide, the filled cells `█` first, then the empty `░`, so filled + empty = 10. Work out the filled cells from this reading's numbers every time, and draw the bar anew; never copy an earlier bar, even when only the count changed:
   - **Tickets:** filled = round(10 × shipped ÷ total), halves up (0 when the total is 0). 3 of 10 fills 3; 1 of 3 fills 3; 2 of 3 fills 7 (`[███████░░░]`); 3 of 3 fills 10.
-  - **Usage:** filled = round(10 × use ÷ cap), halves up, at most 10. 6.1% of a 14.3% cap fills 4; 4.0% fills 3; 16.0% fills 10.
+  - **Usage:** filled = round(10 × use ÷ limit), halves up, at most 10; the limit is the cap per day, the allowance rolling. 6.1% of a 14.3% cap fills 4; 4.0% fills 3; 16.0% fills 10; 15.0% of a 28.6% allowance fills 5.
 
   The labels are padded so both lines' second columns line up: `Tickets` then two spaces, `Usage` then four.
 
@@ -96,7 +100,7 @@ Read them before you write anything for the moment they show, and print them:
 
    Without AskUserQuestion (a headless run), treat it as a stop instead, in one final message: the report of every ticket shipped this run, from every coordinator's hand-backs (not only this one's, since the last message may be all the user reads), then step 4's bars, then the ticket, the options and the recommendation, recommendation first; the user records their answer on the ticket, and running the same command again carries on from it.
 
-6. **Relay the cap.** When the hand-back is **cap reached**, ask the user the cap question with AskUserQuestion: today's use and the cap (or that the cap can't be read, and why) and the ticket in hand and where it stands, in the question, with three options: **Stop here**, **Finish this ticket or one more**, **Keep going today**. Recommend none. Write nothing to the user before the question. Then resume the same coordinator with SendMessage, to the agent ID its dispatch returned, with the answer, and, for keep going today, today's local date (`date +%F`). Don't dispatch a new coordinator for this. Remember a keep going today answer and its date for the rest of the run: every later coordinator's brief that day carries it (steps 2 and 7). Once SendMessage returns, tell the user, in one message, in this order:
+6. **Relay the cap.** When the hand-back is **cap reached**, ask the user the cap question with AskUserQuestion: the use and the limit as the hand-back gives them (per day: today's use and the cap; rolling: the week's use, the allowance and the day) (or that the cap can't be read, and why) and the ticket in hand and where it stands, in the question, with three options: **Stop here**, **Finish this ticket or one more**, **Keep going today**. Recommend none. Write nothing to the user before the question. Then resume the same coordinator with SendMessage, to the agent ID its dispatch returned, with the answer, and, for keep going today, today's local date (`date +%F`). Don't dispatch a new coordinator for this. Remember a keep going today answer and its date for the rest of the run: every later coordinator's brief that day carries it (steps 2 and 7). Once SendMessage returns, tell the user, in one message, in this order:
    - the hand-back's reports (step 4), if it carried any;
    - the two progress bars step 4 read;
    - one line saying their answer and that the coordinator is resumed.
@@ -113,7 +117,7 @@ Read them before you write anything for the moment they show, and print them:
    As with step 2's preview, write it all out as text every time, in a headless run too: lines worked out in your thinking aren't shown. End your turn: its hand-back wakes you.
 
 8. **Show the stop.** When the hand-back is a **stop condition**, show it, with what the user needs to know or do, then what's next. The run ends here:
-   - **The daily cap**, at stop here (step 6) or in a headless run (step 6's last paragraph): step 4's Usage bar gives today's use and the cap, so don't repeat the coordinator's figures; give the ticket in hand, left as it is, and what's committed locally and not pushed. A later run picks it up.
+   - **The daily cap**, at stop here (step 6) or in a headless run (step 6's last paragraph): step 4's Usage bar gives the use and the limit, so don't repeat the coordinator's figures; give the ticket in hand, left as it is, and what's committed locally and not pushed. A later run picks it up.
    - Anything else: as the coordinator said it.
 
 Stopping the coordinator in the agent list stops the loop. To carry on after any stop or restart, run the same command again; the config and the tickets carry the state.

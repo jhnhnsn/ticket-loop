@@ -82,7 +82,7 @@ A hand-back is one of:
 
 - **decision needed** (step 3): the ticket, the options, your recommendation, whether the implementer did real work, and what's committed or left in the tree. The launcher resumes you with the answer.
 - **budget reached** (see Ticket budget): the next ticket, number and title, any named tickets skipped and why (step 1), and what any ready-for-human ticket needs (Stop conditions). With the reports, that's all it carries: the launcher starts a fresh coordinator, which reads the rest from the tracker.
-- **cap reached** (see Daily cap): today's use and the cap (or that it can't be read, and why), the ticket in hand (number and title, or none) and where it stands, and what's committed locally. Nothing is dispatched or shipped after the check that tripped. The launcher resumes you with the user's answer.
+- **cap reached** (see Daily cap): the cap's mode, use and limit (per day: today's use and the cap; rolling: the week's use, the allowance and the day, as `week 20.0%, allowance 42.9% (day 3 of 7)`), or that it can't be read and why, the ticket in hand (number and title, or none) and where it stands, and what's committed locally. Nothing is dispatched or shipped after the check that tripped. The launcher resumes you with the user's answer.
 - a **stop condition** (which one, and what the user needs to know or do), then what's next.
 
 Whichever it is, add the report from step 6 of each ticket shipped since your last hand-back. That's all the launcher keeps, so leave out the working detail. **Dispatch** above says how to hand back in your session. A hand-back ends your turn of work. If the launcher resumes you with SendMessage, carry on from where you stopped: the run goes on until your next hand-back.
@@ -98,10 +98,17 @@ When the frontier is empty, there's no next ticket: hand back as Stop conditions
 
 ## Daily cap
 
-The loop never goes past the user's **daily cap** (the share of their plan's weekly usage one day may take, from the loop config). Check the cap before every subagent dispatch and before every ship, with the Skill tool's `tokencount:tokencount` (the tokencount plugin): its `--json` report's `today.percent_of_week` is how much of the plan's weekly usage today has taken so far. Don't set tokencount's guard for this: it blocks every session on the account, where the cap only pauses the loop.
+The loop never goes past the user's **daily cap** (the share of their plan's weekly usage one day may take, its **daily share**, from the loop config). Check the cap before every subagent dispatch and before every ship, with the Skill tool's `tokencount:tokencount` (the tokencount plugin) `--json` report. Don't set tokencount's guard for this: it blocks every session on the account, where the cap only pauses the loop.
 
-- **Under the cap:** carry on.
-- **At or over the cap, or unreadable** (tokencount isn't installed or isn't available, its `usage_source` is `unavailable`, or `today.percent_of_week` is null): dispatch nothing and ship nothing. Hand back **cap reached** (see Hand-back). The launcher asks the user and resumes you with the answer:
+The config's Daily cap section names its **mode**. Each mode reads a **use** and a **limit** from the report:
+
+- **Per day** (the section says `per day`, or doesn't name a mode): use is `today.percent_of_week` (how much of the week's usage today has taken since local midnight); limit is the daily share.
+- **Rolling** (the section says `rolling`): use is `week.percent_used` (the week's usage so far); limit is the **allowance**, the daily share × the **day of the usage week**, at most 100%. The usage week ends at `week.resets_at` and starts 7 days before it. Day 1 is the local calendar date (`date +%F`) on which that start falls, day 2 the next local date, and so on, at most 7: day = (today's local date − the start's local date in days) + 1, capped at 7. With a 14.3% share, day 1 allows 14.3%, day 2 28.6%, day 3 42.9%, day 7 100%. Example: `week.resets_at` 2026-11-10T07:00Z in US Pacific starts the week at 2026-11-02 23:00 local, so 2026-11-02 is day 1 and 2026-11-04 is day 3 (allowance 42.9%). Compute the allowance with the share's exact value, then show it to one decimal.
+
+The **verdict** compares the two:
+
+- **Under the limit** (use < limit): carry on.
+- **At or over the limit, or unreadable** (tokencount isn't installed or isn't available, its `usage_source` is `unavailable`, or the mode's fields are null: `today.percent_of_week` per day; `week.percent_used` or `week.resets_at` rolling): dispatch nothing and ship nothing. Hand back **cap reached** (see Hand-back). The launcher asks the user and resumes you with the answer:
   - **Stop here:** dispatch and ship nothing more. Leave the ticket in hand as it is, and hand back a stop condition saying what's committed locally and not pushed, and what's left in the tree; a later run picks it up.
   - **Finish this ticket or one more:** carry on without the check until one more ticket ships: the ticket in hand, or, with none in hand, the next one. Then the check applies again, and at the cap you hand back **cap reached** again.
   - **Keep going today:** skip the check for the rest of that day: while today's local date (`date +%F`) is the date the launcher recorded with the answer, in its message or your brief. From the next date on, check again. A brief that says the user chose to keep going today means the same: skip the check that day, without handing back for it.

@@ -30,6 +30,7 @@ Test hooks:
 
 - **Dummy tickets:** each test plan files its own under a fresh sandbox parent issue (one-line tickets; a ticket built to force a decision; several for a handover).
 - **Low cap:** set the sandbox config's Daily cap below today's use to make the cap trip at once.
+- **Low rolling cap:** set the sandbox config's Daily cap to `Rolling: 0.1% of the plan's weekly usage per day.`, so the allowance (at most 0.7%) is below the week's use and the cap trips at once.
 - **Cap not applicable:** replace the sandbox config's Daily cap section's text with `Not applicable: no plan usage to read.`, so the loop skips the cap and the preview's Usage line says so.
 - **Cap unreadable:** disable tokencount in the sandbox only, with a sandbox `.claude/settings.local.json` of `{"enabledPlugins": {"tokencount@tokencount": false}}`, so the coordinator can't read the cap. Clean-up removes the file. Never change the user settings or the plugin cache for this.
 - **Low budget:** add a `## Ticket budget` section to the sandbox config with a budget of 1, so a handover comes after the first ticket.
@@ -68,4 +69,4 @@ One ticket at a time by default. When the frontier has two or more ready tickets
 
 ## Daily cap
 
-14.3% of the plan's weekly usage per day (one day's share), read from tokencount's `today.percent_of_week`.
+Rolling: 14.3% of the plan's weekly usage per day (one day's share), so the week's use so far (tokencount's `week.percent_used`) may reach 14.3% × the day of the usage week.
