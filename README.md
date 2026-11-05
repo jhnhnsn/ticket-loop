@@ -65,7 +65,7 @@ yours, and stops only when it needs you and at the end of each milestone.
    M1: 7 ready, about 2 coordinators.
    Tickets  [███░░░░░░░] 3 of 10 shipped
    Usage    [████░░░░░░] 6.1% of the week today, cap 14.3%
-   Coordinator: Opus, medium · Implementer: Opus, low · Standards reviewer: Sonnet, usual · Spec reviewer: Opus, high
+   Coordinator: Opus, medium · Researcher: Haiku, usual · Implementer: Opus, low · Standards reviewer: Sonnet, usual · Spec reviewer: Opus, high
    ```
 
    **Tickets** counts the parent's tickets that are closed, out of all of them, open or
@@ -116,7 +116,7 @@ question carrying its drafted answer so "yes" accepts it:
 | Ship | the branch to push, the publish or deploy command, per ticket or per milestone |
 | Changelog | where each shipped ticket's entry goes, who reads it, what it says, its order and links, where milestone summaries go, whether upcoming milestones are listed |
 | Stops | anything beyond the built-in stops |
-| Models | the model and effort for the coordinator, the implementer, the Standards reviewer and the Spec reviewer |
+| Models | the model and effort for the coordinator, the researcher, the implementer, the Standards reviewer and the Spec reviewer |
 | Commits | message style, closing keyword, attribution lines |
 | Concurrency | one ticket at a time, or parallel worktrees |
 | Daily cap | the share of your plan's weekly usage one day may take (one day's share, 14.3%, by default), and whether it's rolling or per day (rolling if its text starts with `Rolling:`, otherwise per day) |
@@ -147,15 +147,23 @@ The loop has two roles. The **launcher** is the skill in your main thread: it ru
 there's no config, works out the argument (a bad one fails there, in front of you), starts the
 coordinator, and shows you what it hands back. The **coordinator** is a subagent shipped with
 the plugin (`ticket-loop:coordinator`, on the config's coordinator model): it takes each ticket
-through these steps, dispatching the implementer and reviewers as subagents of its own, each
-labelled with its ticket first (`#82 implement: greet option`, `#82 spec review`). That's two
+through these steps, dispatching the researcher, implementer and reviewers as subagents of its
+own, each labelled with its ticket first (`#82 research: greet option`, `#82 implement: greet
+option`, `#82 spec review`). That's two
 levels of subagents, within Claude Code's default nesting limit.
 
 1. **Frontier:** the next open `ready-for-agent` ticket under the parent whose blockers are all
    closed, in the config's order. Run with tickets instead, it's the next one named, in the order
    given; a named ticket that isn't `ready-for-agent`, or waits on an open ticket you didn't name,
    is skipped and you're told why.
-2. **Implement:** a fresh implementer subagent builds it test-first at the seams the ticket
+2. **Research, then implement:** first a cheap, read-only **researcher** subagent (Haiku by
+   default) maps the ticket in a **research note** of at most 300 words: the files and functions
+   it touches as `path:line`, the patterns and earlier commits to follow, the existing seams,
+   tests and checks command, and any open question or ticket–reference conflict, flagged but not
+   decided. The coordinator posts it on the ticket as a `Research note (#82 research)` comment.
+   It edits, commits and files nothing; if it fails, the implementer goes ahead without it and
+   the ticket's report says "research skipped". Then a fresh implementer subagent, starting from
+   the ticket's research notes, builds it test-first at the seams the ticket
    names, runs the checks, commits locally (staging only its own files), and reports "ready to
    test" with a step-by-step **test plan** and the expected results.
 3. **Decide:** where the ticket and the reference disagree, the config's rule settles it.
@@ -175,7 +183,8 @@ levels of subagents, within Claude Code's default nesting limit.
    found later becomes a new ticket, not another round.
 5. **Ship:** the coordinator adds the ticket's changelog entry, commits it, pushes, and
    publishes as the config says.
-6. **Report:** a few lines for its hand-back, then the next ticket.
+6. **Report:** a few lines for its hand-back, including how many research passes ran, then the
+   next ticket.
 
 ## When it stops
 
@@ -209,8 +218,11 @@ for each ticket it worked.
 
 ## Models
 
-Each role's model comes from the config: the coordinator, the implementer and the two
-reviewers. A config without a coordinator model runs it on the implementer's. The default
+Each role's model comes from the config: the coordinator, the researcher, the implementer and
+the two reviewers. A config without a coordinator model runs it on the implementer's; one
+without a researcher line runs it on Haiku at `usual` effort (`- Researcher: Haiku, usual
+effort.`), since a research note is a map and should cost far less than the implementer's own
+search. The default
 suggestion, from a trial where Opus and Sonnet implemented the same ticket side by side: **Opus
 for the implementer and the Spec reviewer, Sonnet for the Standards reviewer.** Sonnet's implementer was about 40% faster but
 missed a detail in the reference source that Opus got right; the Spec reviewer caught it, which
@@ -235,7 +247,7 @@ When a run starts, the main thread's preview (see [Let it work](#getting-started
 every role as the run uses them, defaults applied:
 
 ```
-Coordinator: Opus, medium · Implementer: Opus, low · Standards reviewer: Sonnet, usual · Spec reviewer: Opus, high
+Coordinator: Opus, medium · Researcher: Haiku, usual · Implementer: Opus, low · Standards reviewer: Sonnet, usual · Spec reviewer: Opus, high
 ```
 
 Per-role effort needs Claude Code 2.1.292 or later. A model runs the highest level it supports

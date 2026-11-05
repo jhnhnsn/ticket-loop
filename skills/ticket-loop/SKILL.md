@@ -19,16 +19,17 @@ The **loop config**, `docs/agents/ticket-loop.md`, says how this project's ticke
 
 ## Roles
 
-The run has four roles: the coordinator, the implementer, the Standards reviewer and the Spec reviewer. Each takes its model and its **effort** from the config's Models section (`Implementer: Opus, low effort.`). Whoever dispatches a role passes its effort as the Agent tool's `effort` parameter (`low`, `medium`, `high`, `xhigh`, `max`): you for the coordinator, the coordinator for the implementers and reviewers. The config is the user's explicit choice of effort, so pass it. `usual` means the role is dispatched without an `effort` parameter, at its usual effort.
+The run has five roles: the coordinator, the researcher, the implementer, the Standards reviewer and the Spec reviewer. Each takes its model and its **effort** from the config's Models section (`Implementer: Opus, low effort.`). Whoever dispatches a role passes its effort as the Agent tool's `effort` parameter (`low`, `medium`, `high`, `xhigh`, `max`): you for the coordinator, the coordinator for the researchers, implementers and reviewers. The config is the user's explicit choice of effort, so pass it. `usual` means the role is dispatched without an `effort` parameter, at its usual effort.
 
 What the config leaves out, the defaults fill, without asking (a config written before effort existed has none):
 
 - **Coordinator:** the implementer's model; `medium` effort.
+- **Researcher:** Haiku; `usual` effort (a config written before the researcher existed has no line for it).
 - **Implementer:** `low` effort.
 - **Standards reviewer:** `usual` effort.
 - **Spec reviewer:** `high` effort.
 
-The **roles line** is each role's model and effort with the defaults applied, in that order, the model's name capitalized: `Coordinator: Opus, medium · Implementer: Opus, low · Standards reviewer: Sonnet, usual · Spec reviewer: Opus, high`. Step 2 previews it, and the coordinator's brief carries it, so the run dispatches each role as the preview said.
+The **roles line** is each role's model and effort with the defaults applied, in that order, the model's name capitalized: `Coordinator: Opus, medium · Researcher: Haiku, usual · Implementer: Opus, low · Standards reviewer: Sonnet, usual · Spec reviewer: Opus, high`. Step 2 previews it, and the coordinator's brief carries it, so the run dispatches each role as the preview said.
 
 ## Progress
 
@@ -82,7 +83,7 @@ Read them before you write anything for the moment they show, and print them:
    M1: 7 ready, about 2 coordinators.
    Tickets  [███░░░░░░░] 3 of 10 shipped
    Usage    [████░░░░░░] 6.1% of the week today, cap 14.3%
-   Coordinator: Opus, medium · Implementer: Opus, low · Standards reviewer: Sonnet, usual · Spec reviewer: Opus, high
+   Coordinator: Opus, medium · Researcher: Haiku, usual · Implementer: Opus, low · Standards reviewer: Sonnet, usual · Spec reviewer: Opus, high
    ```
 
    Then, in a line, say that the coordinator is running, that the user can watch it (and its test queue) in the agent view, and that the main thread is theirs meanwhile. The user, in a headless run too, sees only what you write as text, so write the preview out every time: lines worked out in your thinking aren't shown. End your turn: its hand-back wakes you.
