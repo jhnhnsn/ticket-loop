@@ -2,7 +2,9 @@
 
 What changes for you, the person running the loop, newest first.
 
-## Unreleased
+## 1.14.0
+
+The researcher milestone (#29) is done. A cheap, read-only researcher maps each ticket before every implementer, its first and each fix pass, so a low-effort implementer starts from a note on the ticket instead of searching on its own.
 
 - A researcher maps each ticket before its first implementer. It's a cheap, read-only fifth role (Haiku at usual effort unless your config's Models section names a `Researcher:`), shown in the preview's roles line. Its note of at most 300 words, with `path:line` pointers, is posted on the ticket as `Research note (#<ticket> research)`, and the implementer starts from it. If research fails or the note runs long, the ticket goes ahead without it, and each ticket's report says how many research passes ran. ([#30](https://github.com/jhnhnsn/ticket-loop/issues/30))
 - Setup's Models question asks for the researcher's model and effort alongside the other roles, recommending Haiku at usual effort, and writes a `Researcher:` line into your config. A config written before the researcher existed still gets those defaults without being asked. ([#32](https://github.com/jhnhnsn/ticket-loop/issues/32))
