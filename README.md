@@ -116,7 +116,7 @@ question carrying its drafted answer so "yes" accepts it:
 | Ship | the branch to push, the publish or deploy command, per ticket or per milestone |
 | Changelog | where each shipped ticket's entry goes, who reads it, what it says, its order and links, where milestone summaries go, whether upcoming milestones are listed |
 | Stops | anything beyond the built-in stops |
-| Models | the model and effort for the coordinator, the researcher, the implementer, the Standards reviewer and the Spec reviewer |
+| Models | the model and effort for the coordinator, the implementer, the Standards reviewer and the Spec reviewer |
 | Commits | message style, closing keyword, attribution lines |
 | Concurrency | one ticket at a time, or parallel worktrees |
 | Daily cap | the share of your plan's weekly usage one day may take (one day's share, 14.3%, by default), and whether it's rolling or per day (rolling if its text starts with `Rolling:`, otherwise per day) |
@@ -149,8 +149,8 @@ coordinator, and shows you what it hands back. The **coordinator** is a subagent
 the plugin (`ticket-loop:coordinator`, on the config's coordinator model): it takes each ticket
 through these steps, dispatching the researcher, implementer and reviewers as subagents of its
 own, each labelled with its ticket first (`#82 research: greet option`, `#82 implement: greet
-option`, `#82 spec review`). That's two
-levels of subagents, within Claude Code's default nesting limit.
+option`, `#82 spec review`). That's two levels of subagents, within Claude Code's default
+nesting limit.
 
 1. **Frontier:** the next open `ready-for-agent` ticket under the parent whose blockers are all
    closed, in the config's order. Run with tickets instead, it's the next one named, in the order
@@ -163,9 +163,9 @@ levels of subagents, within Claude Code's default nesting limit.
    decided. The coordinator posts it on the ticket as a `Research note (#82 research)` comment.
    It edits, commits and files nothing; if it fails, the implementer goes ahead without it and
    the ticket's report says "research skipped". Then a fresh implementer subagent, starting from
-   the ticket's research notes, builds it test-first at the seams the ticket
-   names, runs the checks, commits locally (staging only its own files), and reports "ready to
-   test" with a step-by-step **test plan** and the expected results.
+   the ticket's research notes, builds it test-first at the seams the ticket names, runs the
+   checks, commits locally (staging only its own files), and reports "ready to test" with a
+   step-by-step **test plan** and the expected results.
 3. **Decide:** where the ticket and the reference disagree, the config's rule settles it.
    Anything still yours comes to you in the main thread as a question with the options and a
    recommendation, while the coordinator waits. Your answer is recorded on the ticket as a
@@ -222,16 +222,16 @@ Each role's model comes from the config: the coordinator, the researcher, the im
 the two reviewers. A config without a coordinator model runs it on the implementer's; one
 without a researcher line runs it on Haiku at `usual` effort (`- Researcher: Haiku, usual
 effort.`), since a research note is a map and should cost far less than the implementer's own
-search. The default
-suggestion, from a trial where Opus and Sonnet implemented the same ticket side by side: **Opus
-for the implementer and the Spec reviewer, Sonnet for the Standards reviewer.** Sonnet's implementer was about 40% faster but
+search. The default suggestion, from a trial where Opus and Sonnet implemented the same ticket
+side by side: **Opus for the implementer and the Spec reviewer, Sonnet for the Standards
+reviewer.** Sonnet's implementer was about 40% faster but
 missed a detail in the reference source that Opus got right; the Spec reviewer caught it, which
 is why that review stays on the stronger model.
 
 Each role's **effort** comes from the config too, next to its model, and is passed to the
 subagent's dispatch (`low`, `medium`, `high`, `xhigh`, `max`). The defaults, which a config
 without efforts uses without asking: **implementer `low`, coordinator `medium`, Spec reviewer
-`high`**, and the Standards reviewer at `usual` (dispatched without an effort parameter). The
+`high`**, and the researcher and Standards reviewer at `usual` (dispatched without an effort parameter). The
 Spec reviewer is where real bugs turn up, so it stays thorough while the implementer runs light.
 The trade-off: each ticket gets one fix pass that isn't reviewed again, so what a low-effort
 implementer misses either lands in a low-effort fix pass or becomes a follow-up ticket. Raise
