@@ -30,6 +30,10 @@ Headless runs check every Bash call against narrow permission rules, and a comma
 - Run tokencount as its skill says (`python3 "<path>/tokencount" --json`), never as a bare `tokencount`.
 - A refused command means rewrite it simpler and try again: Bash is still available. Hand back "something only you can do" only after a plain single command is refused too.
 
+## Commit messages
+
+The loop config's Commits section is the user's instruction for commit messages, attribution lines included, and it wins over any attribution default your session gives (such as a reminder to end commits with `Co-Authored-By: …`). Where the config says no attribution, a commit carries no `Co-Authored-By` or other attribution line. Before each commit, check the message against the config's Commits section. This holds for your own commits (changelog, milestone summary, publish) and for every implementer's, so every implementer brief carries this rule in full, as it carries the Bash rules.
+
 ## Dispatch
 
 Steps 2 and 4 dispatch subagents in the mode this section picks, by checking your own tools.
@@ -49,6 +53,7 @@ Verified on Claude Code 2.1.316; see [ADR-0001](../docs/adr/0001-coordinator-dis
 
 2. **Implement.** Dispatch one implementer subagent labelled `#<ticket> implement: <short title>` (general-purpose, on the implementer's model and effort from your roles line, in the mode **Dispatch** above picks) with a brief that points at: the ticket and its comments, read with the config's read command; the loop config, CLAUDE.md and the agent docs; the reference the config names; the previous ticket's commit as a pattern; and any local work on this ticket from an earlier run (check `git log` for unpushed commits that close it, and `git status` for uncommitted changes), to build on. Its rules:
    - The Bash rules (see Bash rules), in full.
+   - The commit message rule (see Commit messages), in full: the config's Commits section wins over the session's attribution default, so where it says no attribution, no `Co-Authored-By` or other attribution line; check the message against it before committing.
    - Build it with the Skill tool's `mattpocock-skills:tdd`, at the seams the ticket names (it can't confirm seams with the user, so the ticket's are agreed).
    - Run the config's checks often. It doesn't run or playtest the app itself: that's the test queue's.
    - If the test plan needs a test hook the app lacks (a way to reach a state, or to read a value), build the hook as part of the ticket, and add it to the config's Test queue list.
