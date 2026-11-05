@@ -116,7 +116,7 @@ question carrying its drafted answer so "yes" accepts it:
 | Ship | the branch to push, the publish or deploy command, per ticket or per milestone |
 | Changelog | where each shipped ticket's entry goes, who reads it, what it says, its order and links, where milestone summaries go, whether upcoming milestones are listed |
 | Stops | anything beyond the built-in stops |
-| Models | the model and effort for the coordinator, the implementer, the Standards reviewer and the Spec reviewer |
+| Models | the model and effort for the coordinator, the researcher (Haiku, usual effort drafted), the implementer, the Standards reviewer and the Spec reviewer |
 | Commits | message style, closing keyword, attribution lines |
 | Concurrency | one ticket at a time, or parallel worktrees |
 | Daily cap | the share of your plan's weekly usage one day may take (one day's share, 14.3%, by default), and whether it's rolling or per day (rolling if its text starts with `Rolling:`, otherwise per day) |
