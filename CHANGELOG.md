@@ -2,6 +2,10 @@
 
 What changes for you, the person running the loop, newest first.
 
+## Unreleased
+
+- Commits in a run follow your loop config's Commits section, even when the session's own default asks for a `Co-Authored-By` line. Where the config says no attribution, no commit carries one, whether the launcher, a coordinator or an implementer made it. ([#27](https://github.com/jhnhnsn/ticket-loop/issues/27))
+
 ## 1.12.0
 
 Headless and unattended runs survive refused Bash commands: every agent makes one plain call at a time and reads tickets with `--json`. Published on its own, between milestones.
