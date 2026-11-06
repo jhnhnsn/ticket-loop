@@ -19,7 +19,7 @@ We observed that being woken goes with having SubagentHandback. We didn't prove 
 
 - The coordinator's agent definition (#3) must not hide SubagentHandback in interactive sessions. Whether a `tools` list in the agent frontmatter can remove it is untested, so the definition sets no `tools` or `disallowedTools` and inherits every tool a subagent gets.
 - Headless test-queue runs in the sandbox exercise only the foreground path. The background path needs an interactive or `claude --bg` run.
-- Review findings and test failures go to a fresh implementer in interactive runs too, as in headless ones (the owner's decision on #31), so the scoped research pass always runs before the fix. This also stops relying on SendMessage to a finished implementer, which Open marks unverified. A decision's answer still goes to the same implementer, unless it stopped early.
+- Review findings and test failures go to a fresh implementer in interactive runs too, as in headless ones (the owner's decision on #31), so on a `research`-labelled ticket the scoped research pass always runs before the fix. This also stops relying on SendMessage to a finished implementer, which Open marks unverified. A decision's answer still goes to the same implementer, unless it stopped early.
 - Re-run the trial when Claude Code changes how subagents hand back. Ask the main thread to dispatch a background coordinator. The coordinator dispatches a background child (`date +%T; sleep 20; date +%T`, then a word), ends its turn with "COORDINATOR WAITING", and reports "COORDINATOR WOKEN: <word>" if woken. Run it headless from the sandbox with `--allowedTools "Agent Bash(sleep:*) Bash(date:*) SendMessage"`, prompt first and stdin closed.
 
 ## Open

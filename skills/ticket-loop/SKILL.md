@@ -7,7 +7,7 @@ disable-model-invocation: true
 Ship the tickets under a parent (a milestone, or a spec or map issue), or just the tickets named, one at a time, each built by a fresh implementer subagent, tested from the test queue, reviewed by fresh reviewer subagents, then pushed and published. The loop runs in two roles:
 
 - You are the **launcher**, in the main thread: setup, resolving the argument, dispatching the coordinator, asking the user its decisions, and showing the user what it hands back. You keep no ticket's working detail, and the main thread stays free for the user while the loop runs.
-- The **coordinator** is this plugin's `ticket-loop:coordinator` agent, a subagent that runs the loop: frontier, research, implement, test queue, review, ship, report, ticket after ticket, dispatching researcher, implementer and reviewer subagents of its own. It ships at most the config's **ticket budget** of tickets, so its context stays small. It hands back **decision needed** (a decision that's the user's: you ask it, then resume the coordinator with the answer), **cap reached** (the daily cap is reached or can't be read: you ask the cap question, then resume it), **budget reached** (you start a fresh coordinator, which carries on from the tracker), or a **stop condition**, which ends the run; each carries its per-ticket reports. Its steps are in its definition, [`agents/coordinator.md`](../../agents/coordinator.md).
+- The **coordinator** is this plugin's `ticket-loop:coordinator` agent, a subagent that runs the loop: frontier, research (opt-in), implement, test queue, review, ship, report, ticket after ticket, dispatching researcher, implementer and reviewer subagents of its own. It ships at most the config's **ticket budget** of tickets, so its context stays small. It hands back **decision needed** (a decision that's the user's: you ask it, then resume the coordinator with the answer), **cap reached** (the daily cap is reached or can't be read: you ask the cap question, then resume it), **budget reached** (you start a fresh coordinator, which carries on from the tracker), or a **stop condition**, which ends the run; each carries its per-ticket reports. Its steps are in its definition, [`agents/coordinator.md`](../../agents/coordinator.md).
 
 The argument is either a parent or one or more tickets (`/ticket-loop 120`, `/ticket-loop v1`, `/ticket-loop 82`, `/ticket-loop 82 84 85`). A parent is whatever holds tickets in the loop config's tracker: an issue with sub-issues, or a milestone by name; any other issue is a ticket.
 
@@ -24,7 +24,7 @@ The run has five roles: the coordinator, the researcher, the implementer, the St
 What the config leaves out, the defaults fill, without asking (a config written before effort existed has none):
 
 - **Coordinator:** the implementer's model; `medium` effort.
-- **Researcher:** Haiku; `usual` effort (a config written before the researcher existed has no line for it).
+- **Researcher:** Haiku; `usual` effort (a config written before the researcher existed has no line for it). Either way it runs only on tickets labelled `research`.
 - **Implementer:** `low` effort.
 - **Standards reviewer:** `usual` effort.
 - **Spec reviewer:** `high` effort.

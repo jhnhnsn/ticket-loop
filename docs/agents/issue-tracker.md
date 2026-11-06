@@ -18,9 +18,11 @@ Infer the repo from `git remote -v`; `gh` does this automatically when run insid
 
 Like the triage labels (see `triage-labels.md`), this maps a ticket-loop role to the label string in this tracker.
 
-| Role in ticket-loop | Label in our tracker | Meaning                                                    |
-| ------------------- | -------------------- | ---------------------------------------------------------- |
+| Role in ticket-loop | Label in our tracker | Meaning                                                           |
+| ------------------- | -------------------- | ----------------------------------------------------------------- |
 | research opt-in     | `research`           | The loop runs a researcher before each implementer on this ticket |
+
+The loop uses this literal name in every project.
 
 ## Pull requests as a triage surface
 

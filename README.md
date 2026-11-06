@@ -159,9 +159,9 @@ nesting limit.
 2. **Research (opt-in), then implement:** research runs only on a ticket carrying the
    `research` label; add it to tickets in unfamiliar code, ones that lean on a reference, or
    fixes across several files. An unlabelled ticket gets no research and no note, and its report
-   says `research: not requested`. On a labelled ticket, first a cheap, read-only **researcher**
-   subagent (Haiku by default) maps the ticket in a **research note** of at most 300 words: the files and functions
-   it touches as `path:line`, the patterns and earlier commits to follow, the existing seams,
+   says `research: not requested`. On a labelled ticket, first a cheap, read-only
+   **researcher** subagent (Haiku by default) maps the ticket in a **research note** of at most
+   300 words: the files and functions it touches as `path:line`, the patterns and earlier commits to follow, the existing seams,
    tests and checks command, and any open question or ticket–reference conflict, flagged but not
    decided. The coordinator posts it on the ticket as a `Research note (#82 research)` comment.
    It edits, commits and files nothing; if it fails, the implementer goes ahead without it and
@@ -182,15 +182,15 @@ nesting limit.
    **Standards** (the repo's conventions) and **Spec** (the ticket and the reference, where
    real bugs turn up), once per ticket. Failures and findings go to a fresh implementer, who
    fixes them all in one follow-up commit carrying the playtest record. Every later implementer
-   on a `research`-labelled ticket (for the review fixes, after a test failure, or fresh after a decision) gets its
-   own research pass first, scoped to what it's fixing and posted as a new note naming its
+   on a `research`-labelled ticket (for the review fixes, after a test failure, or fresh after
+   a decision) gets its own research pass first, scoped to what it's fixing and posted as a new note naming its
    purpose (`Research note (#82 research) for the review fixes`). The follow-up fixes aren't
    reviewed again: the coordinator re-runs the checks and the affected test steps, and anything
    found later becomes a new ticket, not another round.
 5. **Ship:** the coordinator adds the ticket's changelog entry, commits it, pushes, and
    publishes as the config says.
-6. **Report:** a few lines for its hand-back, including how many research passes ran, then the
-   next ticket.
+6. **Report:** a few lines for its hand-back, including how many research passes ran (or
+   `research: not requested`), then the next ticket.
 
 ## When it stops
 
@@ -228,7 +228,8 @@ Each role's model comes from the config: the coordinator, the researcher, the im
 the two reviewers. A config without a coordinator model runs it on the implementer's; one
 without a researcher line runs it on Haiku at `usual` effort (`- Researcher: Haiku, usual
 effort.`), since a research note is a map and should cost far less than the implementer's own
-search. The default suggestion, from a trial where Opus and Sonnet implemented the same ticket
+search. Either way the researcher is opt-in: it runs only on tickets labelled `research`.
+The default suggestion, from a trial where Opus and Sonnet implemented the same ticket
 side by side: **Opus for the implementer and the Spec reviewer, Sonnet for the Standards
 reviewer.** Sonnet's implementer was about 40% faster but
 missed a detail in the reference source that Opus got right; the Spec reviewer caught it, which
