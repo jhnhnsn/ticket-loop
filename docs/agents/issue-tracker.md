@@ -14,6 +14,14 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
 
+## Ticket-loop labels
+
+Like the triage labels (see `triage-labels.md`), this maps a ticket-loop role to the label string in this tracker.
+
+| Role in ticket-loop | Label in our tracker | Meaning                                                    |
+| ------------------- | -------------------- | ---------------------------------------------------------- |
+| research opt-in     | `research`           | The loop runs a researcher before each implementer on this ticket |
+
 ## Pull requests as a triage surface
 
 **PRs as a request surface: no.** _(Set to `yes` if this repo treats external PRs as feature requests; `/triage` reads this flag.)_

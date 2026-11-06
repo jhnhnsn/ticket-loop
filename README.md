@@ -65,7 +65,7 @@ yours, and stops only when it needs you and at the end of each milestone.
    M1: 7 ready, about 2 coordinators.
    Tickets  [███░░░░░░░] 3 of 10 shipped
    Usage    [████░░░░░░] 6.1% of the week today, cap 14.3%
-   Coordinator: Opus, medium · Researcher: Haiku, usual · Implementer: Opus, low · Standards reviewer: Sonnet, usual · Spec reviewer: Opus, high
+   Coordinator: Opus, medium · Researcher: Haiku, usual (opt-in) · Implementer: Opus, low · Standards reviewer: Sonnet, usual · Spec reviewer: Opus, high
    ```
 
    **Tickets** counts the parent's tickets that are closed, out of all of them, open or
@@ -116,7 +116,7 @@ question carrying its drafted answer so "yes" accepts it:
 | Ship | the branch to push, the publish or deploy command, per ticket or per milestone |
 | Changelog | where each shipped ticket's entry goes, who reads it, what it says, its order and links, where milestone summaries go, whether upcoming milestones are listed |
 | Stops | anything beyond the built-in stops |
-| Models | the model and effort for the coordinator, the researcher (Haiku, usual effort drafted), the implementer, the Standards reviewer and the Spec reviewer |
+| Models | the model and effort for the coordinator, the researcher (opt-in per ticket with the `research` label; Haiku, usual effort drafted), the implementer, the Standards reviewer and the Spec reviewer |
 | Commits | message style, closing keyword, attribution lines |
 | Concurrency | one ticket at a time, or parallel worktrees |
 | Daily cap | the share of your plan's weekly usage one day may take (one day's share, 14.3%, by default), and whether it's rolling or per day (rolling if its text starts with `Rolling:`, otherwise per day) |
@@ -156,8 +156,11 @@ nesting limit.
    closed, in the config's order. Run with tickets instead, it's the next one named, in the order
    given; a named ticket that isn't `ready-for-agent`, or waits on an open ticket you didn't name,
    is skipped and you're told why.
-2. **Research, then implement:** first a cheap, read-only **researcher** subagent (Haiku by
-   default) maps the ticket in a **research note** of at most 300 words: the files and functions
+2. **Research (opt-in), then implement:** research runs only on a ticket carrying the
+   `research` label; add it to tickets in unfamiliar code, ones that lean on a reference, or
+   fixes across several files. An unlabelled ticket gets no research and no note, and its report
+   says `research: not requested`. On a labelled ticket, first a cheap, read-only **researcher**
+   subagent (Haiku by default) maps the ticket in a **research note** of at most 300 words: the files and functions
    it touches as `path:line`, the patterns and earlier commits to follow, the existing seams,
    tests and checks command, and any open question or ticket–reference conflict, flagged but not
    decided. The coordinator posts it on the ticket as a `Research note (#82 research)` comment.
@@ -179,7 +182,7 @@ nesting limit.
    **Standards** (the repo's conventions) and **Spec** (the ticket and the reference, where
    real bugs turn up), once per ticket. Failures and findings go to a fresh implementer, who
    fixes them all in one follow-up commit carrying the playtest record. Every later implementer
-   on a ticket (for the review fixes, after a test failure, or fresh after a decision) gets its
+   on a `research`-labelled ticket (for the review fixes, after a test failure, or fresh after a decision) gets its
    own research pass first, scoped to what it's fixing and posted as a new note naming its
    purpose (`Research note (#82 research) for the review fixes`). The follow-up fixes aren't
    reviewed again: the coordinator re-runs the checks and the affected test steps, and anything
@@ -250,7 +253,7 @@ When a run starts, the main thread's preview (see [Let it work](#getting-started
 every role as the run uses them, defaults applied:
 
 ```
-Coordinator: Opus, medium · Researcher: Haiku, usual · Implementer: Opus, low · Standards reviewer: Sonnet, usual · Spec reviewer: Opus, high
+Coordinator: Opus, medium · Researcher: Haiku, usual (opt-in) · Implementer: Opus, low · Standards reviewer: Sonnet, usual · Spec reviewer: Opus, high
 ```
 
 Per-role effort needs Claude Code 2.1.292 or later. A model runs the highest level it supports

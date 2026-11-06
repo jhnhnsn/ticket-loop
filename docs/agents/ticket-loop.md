@@ -4,7 +4,7 @@ How `/ticket-loop:ticket-loop` finds, builds, tests, ships and records this repo
 
 ## Tickets
 
-GitHub issues in `jhnhnsn/ticket-loop` (see `docs/agents/issue-tracker.md`). A parent is an issue whose sub-issues are its tickets, or a milestone by name. Blocking is GitHub's native issue dependencies. Labels: `ready-for-agent`, `ready-for-human`.
+GitHub issues in `jhnhnsn/ticket-loop` (see `docs/agents/issue-tracker.md`). A parent is an issue whose sub-issues are its tickets, or a milestone by name. Blocking is GitHub's native issue dependencies. Labels: `ready-for-agent`, `ready-for-human`, and `research` (opts a ticket in to research passes).
 
 Read a ticket: `gh issue view <n> --repo jhnhnsn/ticket-loop --json title,body,labels,comments`, never `--comments`.
 
@@ -23,6 +23,7 @@ The app is the plugin itself. A ticket is tested by a real loop run of the worki
 - **Run:** from the sandbox, the headless command in the sandbox's README (`claude -p "/ticket-loop:ticket-loop <args>" --plugin-dir ~/github/ticket-loop …`, prompt first, stdin closed). Ready when the stream's first message arrives. It loads the working copy in place of the installed plugin.
 - **Read:** the stream-json output (Agent dispatches and their `description` labels, AskUserQuestion calls, the final report), the sandbox tracker (`gh issue view`, comments, closures) and the sandbox's `git log`.
 - **Interactive:** steps that need a question answered (decisions, the daily cap) run in an interactive `claude --plugin-dir ~/github/ticket-loop` session in the sandbox, which the user drives from a test plan: AskUserQuestion isn't available headless (proven at setup).
+- **Research label hook:** opt a sandbox dummy ticket in to research with `gh issue edit <n> --repo jhnhnsn/ticket-loop-sandbox --add-label research` (create the label in the sandbox first if it's missing: `gh label create research --repo jhnhnsn/ticket-loop-sandbox`); leave it off a ticket to test the default.
 - **Test plan measures:** labels in the agent list, what reaches the main thread, tracker state, commits, and that the main session stays free.
 - **Clean up after each test:** close its dummy tickets and parent, reset the sandbox's `main` to its starting commit, e42618b, and undo any config change the test made. Reset with exactly these two commands, each in its own Bash call and in this `git -C` form, since that's the only form the permission rules allow without asking: `git -C ~/github/ticket-loop-sandbox reset --hard e42618b`, then `git -C ~/github/ticket-loop-sandbox push --force-with-lease origin main`. Force-push nowhere but the sandbox.
 

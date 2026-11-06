@@ -29,7 +29,7 @@ What the config leaves out, the defaults fill, without asking (a config written 
 - **Standards reviewer:** `usual` effort.
 - **Spec reviewer:** `high` effort.
 
-The **roles line** is each role's model and effort with the defaults applied, in that order, the model's name capitalized: `Coordinator: Opus, medium · Researcher: Haiku, usual · Implementer: Opus, low · Standards reviewer: Sonnet, usual · Spec reviewer: Opus, high`. Step 2 previews it, and the coordinator's brief carries it, so the run dispatches each role as the preview said.
+The **roles line** is each role's model and effort with the defaults applied, in that order, the model's name capitalized, and the researcher followed by `(opt-in)`, since it runs only on tickets carrying the `research` label: `Coordinator: Opus, medium · Researcher: Haiku, usual (opt-in) · Implementer: Opus, low · Standards reviewer: Sonnet, usual · Spec reviewer: Opus, high`. Step 2 previews it, and the coordinator's brief carries it, so the run dispatches each role as the preview said.
 
 ## Progress
 
@@ -83,14 +83,14 @@ Read them before you write anything for the moment they show, and print them:
    M1: 7 ready, about 2 coordinators.
    Tickets  [███░░░░░░░] 3 of 10 shipped
    Usage    [████░░░░░░] 6.1% of the week today, cap 14.3%
-   Coordinator: Opus, medium · Researcher: Haiku, usual · Implementer: Opus, low · Standards reviewer: Sonnet, usual · Spec reviewer: Opus, high
+   Coordinator: Opus, medium · Researcher: Haiku, usual (opt-in) · Implementer: Opus, low · Standards reviewer: Sonnet, usual · Spec reviewer: Opus, high
    ```
 
    Then, in a line, say that the coordinator is running, that the user can watch it (and its test queue) in the agent view, and that the main thread is theirs meanwhile. The user, in a headless run too, sees only what you write as text, so write the preview out every time: lines worked out in your thinking aren't shown. End your turn: its hand-back wakes you.
 
 3. **While it runs**, the main thread is the user's: answer what they ask as usual. The coordinator's tests and commits see the working tree, so code edits during a run belong in a worktree: make none yourself for the loop, and if the user asks for some, suggest a worktree. Asked "how's the agent doing?", answer from the coordinator's latest state without disturbing it: the tail of its transcript (the output file its dispatch named), the tracker and `git log`. Don't send it a message for this.
 
-4. **Show the hand-back.** Each ticket's report it carries (what shipped, how many research passes ran (or research skipped), decisions they answered and any taken on their behalf, tickets filed), with the two progress bars under the reports, read fresh now (see Progress above). Write them out as text now, or hold them for a later message, as Progress says for this kind of hand-back. Keep none of the coordinator's working detail.
+4. **Show the hand-back.** Each ticket's report it carries (what shipped, how many research passes ran (or research skipped, or research: not requested), decisions they answered and any taken on their behalf, tickets filed), with the two progress bars under the reports, read fresh now (see Progress above). Write them out as text now, or hold them for a later message, as Progress says for this kind of hand-back. Keep none of the coordinator's working detail.
 
 5. **Relay a decision.** When the hand-back is **decision needed**, ask the user with AskUserQuestion: the ticket in the question, the options with the recommendation first (marked as recommended). Write nothing to the user before the question. Record their answer on the ticket as a comment, as the config's tracker says. Then resume the same coordinator with SendMessage, to the agent ID its dispatch returned, with the answer and a pointer to the comment. Don't dispatch a new coordinator for this. Once SendMessage returns, tell the user, in one message, in this order:
    - the hand-back's reports (step 4), if it carried any;
