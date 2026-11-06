@@ -2,6 +2,10 @@
 
 What changes for you, the person running the loop, newest first.
 
+## Unreleased
+
+- Research no longer runs by default. A ticket gets research passes only when it carries a `research` label, and then it gets everything 1.14.0 gave: a pass before its first implementer and one before each later implementer, with notes on the ticket. A ticket without the label goes straight to its implementer, and its report says `research: not requested`. The preview's roles line marks the researcher `(opt-in)`, and setup's Models question tells you how to opt a ticket in. ([#35](https://github.com/jhnhnsn/ticket-loop/issues/35))
+
 ## 1.14.0
 
 The researcher milestone (#29) is done. A cheap, read-only researcher maps each ticket before every implementer, its first and each fix pass, so a low-effort implementer starts from a note on the ticket instead of searching on its own.
