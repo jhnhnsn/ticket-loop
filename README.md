@@ -166,7 +166,8 @@ nesting limit.
    earlier commits to follow, and the existing seams, tests and checks command. The coordinator
    posts it on the ticket as a `Research note (#82 research)` comment; a note over 300 words it
    trims to fit first, keeping every part, pointer and flagged question, and marks it
-   `(trimmed from <n> words)`. It edits, commits and files nothing; if it fails or gives no
+   `(trimmed from <n> words)`; the pass still counts, and the report says
+   `1 research pass (trimmed)`. It edits, commits and files nothing; if it fails or gives no
    `path:line` pointers, the implementer goes ahead without it and
    the ticket's report says "research skipped". Then a fresh implementer subagent, starting from
    the ticket's research notes, builds it test-first at the seams the ticket names, runs the
@@ -192,8 +193,8 @@ nesting limit.
    found later becomes a new ticket, not another round.
 5. **Ship:** the coordinator adds the ticket's changelog entry, commits it, pushes, and
    publishes as the config says.
-6. **Report:** a few lines for its hand-back, including how many research passes ran (or
-   `research: not requested`), then the next ticket.
+6. **Report:** a few lines for its hand-back, including how many research passes ran, trimmed
+   ones marked (or "research skipped", or `research: not requested`), then the next ticket.
 
 ## When it stops
 
