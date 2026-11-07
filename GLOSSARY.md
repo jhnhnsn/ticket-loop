@@ -28,6 +28,9 @@ This project's own terms. With a `## Writing` section of `ASD-STE100`, they are 
 - **agent label:** the name the Agent tool shows for a subagent, such as `#85 spec review`.
 - **decision:** a choice that belongs to the user, asked as a question.
 - **hand-back:** the message a coordinator gives the launcher when it stops its turn of work.
+- **parallel set:** the independent ready tickets, up to the config's limit, that the loop can build side by side.
+- **parallel offer:** the launcher's question that names a parallel set, and the hand-back that asks for it.
+- **answered sets:** the parallel sets that the user accepted or declined in a run, listed in each brief.
 - **brief:** the prompt an agent gives a subagent it starts.
 - **report:** what a subagent returns.
 - **ticket report:** the few lines a coordinator writes per shipped ticket.

@@ -35,6 +35,7 @@ Test hooks:
 - **Cap not applicable:** replace the sandbox config's Daily cap section's text with `Not applicable: no plan usage to read.`, so the loop skips the cap and the preview's Usage line says so.
 - **Cap unreadable:** disable tokencount in the sandbox only, with a sandbox `.claude/settings.local.json` of `{"enabledPlugins": {"tokencount@tokencount": false}}`, so the coordinator can't read the cap. Clean-up removes the file. Never change the user settings or the plugin cache for this.
 - **Blockers unreadable:** refuse the tracker's dependency reads in the sandbox only, with a sandbox `.claude/settings.local.json` of `{"permissions": {"deny": ["Bash(gh api:*)", "Bash(*blocked*)", "Bash(*blocking*)"]}}`, so no agent can read a ticket's native dependencies, through `gh api`, `gh issue view --json`'s two dependency fields, or a search qualifier (`is:blocked`, `blocked-by:`, `blocking:`). A `Blocked by:` line in a ticket's body stays readable, so keep such lines out of this test's tickets. A deny rule beats the headless command's `--allowedTools`. Clean-up removes the file. Never change the user settings for this.
+- **Concurrency modes:** set the sandbox config's Concurrency text to `One at a time.`, `Parallel worktrees: at most 2 at once.` or `Suggest and ask: at most 2 at once.`. For an older config, use `One ticket at a time, or parallel worktrees when offered.` (reads as suggest and ask, limit 2) or remove the section (reads as one at a time). Clean-up restores the text.
 - **Low budget:** add a `## Ticket budget` section to the sandbox config with a budget of 1, so a handover comes after the first ticket.
 - **Effort overrides:** give every role in the sandbox config's Models section an effort other than its default (`- Implementer: Sonnet, high effort.`), then read each Agent call's `effort` in the stream-json. Keep `CLAUDE_CODE_EFFORT_LEVEL` unset: it overrides the parameter.
 - **Writing standard:** add a `## Writing` section to the sandbox config with the text `ASD-STE100` to test the writing rule; leave it out to test the default. For the dictionary check, write `ASD-STE100, dictionary at <path>` with the path to the user's own local copy of the PDF (the repo never holds one). Copy the sandbox a `GLOSSARY.md` from this repo's root if the test needs the project terms. Clean-up removes the section and any copied glossary.
@@ -69,7 +70,7 @@ Plain sentence-case summaries with no type prefix, as in the history. Body ends 
 
 ## Concurrency
 
-One ticket at a time by default. When the frontier has two or more ready tickets that don't block each other, suggest building them in parallel worktrees (at most 2 at once) and ask the user to accept or decline; tests still run one at a time in the main thread.
+Suggest and ask: at most 2 at once.
 
 ## Writing
 

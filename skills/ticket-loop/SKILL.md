@@ -7,7 +7,7 @@ disable-model-invocation: true
 Ship the tickets under a parent (a milestone, or a spec or map issue), or just the tickets named, one at a time, each built by a fresh implementer subagent, tested from the test queue, reviewed by fresh reviewer subagents, then pushed and published. The loop runs in two roles:
 
 - You are the **launcher**, in the main thread: setup, resolving the argument, dispatching the coordinator, asking the user its decisions, and showing the user what it hands back. You keep no ticket's working detail, and the main thread stays free for the user while the loop runs.
-- The **coordinator** is this plugin's `ticket-loop:coordinator` agent, a subagent that runs the loop: frontier, research (opt-in), implement, test queue, review, ship, report, ticket after ticket, dispatching researcher, implementer and reviewer subagents of its own. It ships at most the config's **ticket budget** of tickets, so its context stays small. It hands back **decision needed** (a decision that's the user's: you ask it, then resume the coordinator with the answer), **cap reached** (the daily cap is reached or can't be read: you ask the cap question, then resume it), **budget reached** (you start a fresh coordinator, which carries on from the tracker), or a **stop condition**, which ends the run; each carries its per-ticket reports. Its steps are in its definition, [`agents/coordinator.md`](../../agents/coordinator.md).
+- The **coordinator** is this plugin's `ticket-loop:coordinator` agent, a subagent that runs the loop: frontier, research (opt-in), implement, test queue, review, ship, report, ticket after ticket, dispatching researcher, implementer and reviewer subagents of its own. It ships at most the config's **ticket budget** of tickets, so its context stays small. It hands back **decision needed** (a decision that's the user's: you ask it, then resume the coordinator with the answer), **cap reached** (the daily cap is reached or can't be read: you ask the cap question, then resume it), **parallel offer** (independent ready tickets to build side by side: you ask the user, then resume it), **budget reached** (you start a fresh coordinator, which carries on from the tracker), or a **stop condition**, which ends the run; each carries its per-ticket reports. Its steps are in its definition, [`agents/coordinator.md`](../../agents/coordinator.md).
 
 The argument is either a parent or one or more tickets (`/ticket-loop 120`, `/ticket-loop v1`, `/ticket-loop 82`, `/ticket-loop 82 84 85`). A parent is whatever holds tickets in the loop config's tracker: an issue with sub-issues, or a milestone by name; any other issue is a ticket.
 
@@ -32,6 +32,20 @@ What the config leaves out, the defaults fill, without asking (a config written 
 - **Spec reviewer:** `high` effort.
 
 The **roles line** is each role's model and effort with the defaults applied, in that order, the model's name capitalized, and the researcher followed by `(opt-in)`, since it runs only on tickets carrying the `research` label: `Coordinator: Opus, medium · Researcher: Haiku, usual (opt-in) · Implementer: Opus, low · Standards reviewer: Sonnet, usual · Spec reviewer: Opus, high`. Step 2 previews it, and the coordinator's brief carries it, so the run dispatches each role as the preview said.
+
+## Concurrency
+
+The config's Concurrency section gives the **mode** and its **limit**, the most tickets built at once. Read the mode from how the text starts:
+
+- `One at a time`: one implementer, one ticket.
+- `Parallel worktrees: at most <N> at once.`: independent ready tickets build side by side, up to the limit, with no prompt.
+- `Suggest and ask: at most <N> at once.`: the user accepts or declines each new set of independent ready tickets.
+
+A config without these mode words keeps working, without asking. Text that offers parallel worktrees is suggest and ask, as such a config always asked. Any other text, or no section, is one at a time. The limit is the number the text gives, or 2 without one.
+
+The **parallel set** is the first tickets up to the limit, in the run's order, that are open and ready-for-agent with no open blockers. Tickets with open blockers never count, so tickets blocked on each other make no set. Fewer than two tickets is no set, and nobody asks anything. A set is the same set whatever its order.
+
+The **answered sets** are the sets the user accepted or declined in this run. You keep them for the whole run and give them in every coordinator's brief, so the loop asks no set twice.
 
 ## Progress
 
@@ -61,6 +75,7 @@ Read them before you write anything for the moment they show, and print them:
 - at the start of a run, in step 2's preview, after the coordinator's dispatch;
 - at a **stop condition** hand-back, under its reports (step 4), and at a **decision needed** or **cap reached** one in a headless run, where it's a stop (steps 5 and 6);
 - at a **decision needed** or **cap reached** hand-back with AskUserQuestion, under its reports in step 5's "answer recorded" or step 6's "answer given" message, after the user answers and the coordinator is resumed. Read them before the question, but print nothing of them before it;
+- at a **parallel offer** hand-back, under its reports in step 9's "answer given" message, after the coordinator is resumed. Read them before any question, but print nothing of them before it;
 - at a **budget reached** hand-back, under its reports in step 7's "took over" message, after the fresh coordinator's dispatch. A handover shows nothing else of the preview.
 
 ## Steps
@@ -73,14 +88,14 @@ Read them before you write anything for the moment they show, and print them:
 
    With the section in the config, don't ask again.
 
-1. **Resolve the argument.** Work out from the config's tracker what the run is: a parent, or the tickets named, in the order given. With no argument, take the parent the config says to work next, and say which. Check each issue or milestone exists; if one doesn't, say so and stop, dispatching nothing. Then ask the config's offers, since the coordinator can't ask: where the config offers parallel worktrees and the run has two or more ready tickets that don't block each other, ask the user to accept or decline. Then count the run for step 2's preview:
-   - **Ready count:** its ready tickets (the open ready-for-agent tickets under the parent, blocked or not, since blockers ship as the run goes; or the named tickets that are open and ready-for-agent), then the coordinators they take: the count divided by the ticket budget, rounded up, at least 1 (`M1: 7 ready, about 2 coordinators.`; `#82: 1 ready, about 1 coordinator.`). The ticket budget is the config's Ticket budget; a config without one uses 4, without asking.
+1. **Resolve the argument.** Work out from the config's tracker what the run is: a parent, or the tickets named, in the order given. With no argument, take the parent the config says to work next, and say which. Check each issue or milestone exists; if one doesn't, say so and stop, dispatching nothing. Then ask the parallel offer, since the coordinator can't ask: in suggest and ask mode (see Concurrency above), read the blockers of the run's ready tickets, as the config's tracker says, and work out the parallel set. With a set, ask the user with one AskUserQuestion that names its tickets, with two options: **Accept** (recommended; build them side by side in worktrees) and **Decline** (build the first only, then carry on one at a time). Add the answer to the answered sets. With no set, ask nothing. Without AskUserQuestion (a headless run), or if a blockers read fails, ask nothing and answer nothing: the coordinator reads the blockers itself and takes decline in a headless run. Then count the run for step 2's preview:
+   - **Ready count:** its ready tickets (the open ready-for-agent tickets under the parent, blocked or not, since blockers ship as the run goes; or the named tickets that are open and ready-for-agent; this is the run's size, not the parallel set), then the coordinators they take: the count divided by the ticket budget, rounded up, at least 1 (`M1: 7 ready, about 2 coordinators.`; `#82: 1 ready, about 1 coordinator.`). The ticket budget is the config's Ticket budget; a config without one uses 4, without asking.
    - **Progress:** the two progress bars (see Progress above).
    - **Roles:** the roles line (see Roles above).
 
-   Done when you can name the run (`M1`, `#120`, `#82 #84`), the offers are answered and you have the preview's lines: the ready count, the two bars and the roles line.
+   Done when you can name the run (`M1`, `#120`, `#82 #84`), any parallel offer is answered and you have the preview's lines: the ready count, the two bars and the roles line.
 
-2. **Dispatch the coordinator.** Use the Agent tool with `subagent_type` `ticket-loop:coordinator`, in the background, on the coordinator's model, passed as an alias (`opus`, `sonnet`, `haiku`, `fable`), and with the coordinator's effort as the Agent tool's `effort` parameter, both as the roles line gives them (an effort of `usual`: leave `effort` out). Label it (the Agent tool's `description`) `ticket-loop: <what it runs> coordinator <n>`: the run as step 1 named it, and `<n>` counting this run's coordinators from 1 (`ticket-loop: M1 coordinator 1`, `ticket-loop: #82 #84 coordinator 1`). The `ticket-loop:` prefix sets it apart from the per-ticket subagents it dispatches. Its brief names the run (the parent, or the tickets in order), gives the ticket budget, the roles line and the user's answers to the offers, and points at the loop config. If the user answered **keep going today** to the cap question earlier in this run, and today's local date (`date +%F`) is the date recorded with it, the brief says so, with that date, so the coordinator skips the cap check that day and doesn't ask again (step 6).
+2. **Dispatch the coordinator.** Use the Agent tool with `subagent_type` `ticket-loop:coordinator`, in the background, on the coordinator's model, passed as an alias (`opus`, `sonnet`, `haiku`, `fable`), and with the coordinator's effort as the Agent tool's `effort` parameter, both as the roles line gives them (an effort of `usual`: leave `effort` out). Label it (the Agent tool's `description`) `ticket-loop: <what it runs> coordinator <n>`: the run as step 1 named it, and `<n>` counting this run's coordinators from 1 (`ticket-loop: M1 coordinator 1`, `ticket-loop: #82 #84 coordinator 1`). The `ticket-loop:` prefix sets it apart from the per-ticket subagents it dispatches. Its brief names the run (the parent, or the tickets in order), gives the ticket budget, the roles line, the concurrency mode and limit (`Concurrency: suggest and ask, at most 2.`) and the answered sets (`Answered sets: #82 #84 accepted; #85 #86 declined.`, or `none`), and points at the loop config. If the user answered **keep going today** to the cap question earlier in this run, and today's local date (`date +%F`) is the date recorded with it, the brief says so, with that date, so the coordinator skips the cap check that day and doesn't ask again (step 6).
 
    Once the call returns, tell the user the coordinator is running, in a message that opens with the run's **preview**, these lines in this order:
    - step 1's ready count;
@@ -118,7 +133,7 @@ Read them before you write anything for the moment they show, and print them:
 
    **Status line.** The plugin has a status line script, `scripts/ticket-loop-statusline`, for Claude Code's `statusLine` setting. Setup offers to add it ([`SETUP.md`](SETUP.md)). It shows the status file and the Usage progress bar under the input box, and does not scroll. It makes no GitHub call.
 
-4. **Show the hand-back.** Each ticket's report it carries (what shipped, how many research passes ran, trimmed ones marked (or research skipped, or research: not requested), decisions they answered and any taken on their behalf, tickets filed), with the two progress bars under the reports, read fresh now (see Progress above). Write them out as text now, or hold them for a later message, as Progress says for this kind of hand-back. Keep none of the coordinator's working detail.
+4. **Show the hand-back.** Each ticket's report it carries (what shipped, how many research passes ran, trimmed ones marked (or research skipped, or research: not requested), decisions they answered and any taken on their behalf, tickets filed), any line saying a run took decline on a parallel offer because it couldn't ask, with the two progress bars under the reports, read fresh now (see Progress above). Write them out as text now, or hold them for a later message, as Progress says for this kind of hand-back. Keep none of the coordinator's working detail.
 
 5. **Relay a decision.** When the hand-back is **decision needed**, ask the user with AskUserQuestion: the ticket in the question, the options with the recommendation first (marked as recommended). Write nothing to the user before the question. Record their answer on the ticket as a comment, as the config's tracker says. Then resume the same coordinator with SendMessage, to the agent ID its dispatch returned, with the answer and a pointer to the comment. Don't dispatch a new coordinator for this. Once SendMessage returns, tell the user, in one message, in this order:
    - the hand-back's reports (step 4), if it carried any;
@@ -138,7 +153,7 @@ Read them before you write anything for the moment they show, and print them:
 
    Without AskUserQuestion (a headless run), treat it as a stop instead, in one final message: the report of every ticket shipped this run, from every coordinator's hand-backs, then step 4's bars, then the ticket in hand, where it stands and what's committed locally. To go on today, the user raises the cap in the loop config, or runs the loop interactively and answers the question; otherwise the run waits until the limit grows: tomorrow for a per day cap, or, for a rolling one, the next day of the usage week, when the allowance grows by the daily share at the week's reset time.
 
-7. **Hand over.** When the hand-back is **budget reached**, its next ticket shows the frontier still has a ready one: without asking, dispatch a fresh coordinator with step 2's Agent call, numbered one up (`ticket-loop: M1 coordinator 2`), with the same budget, roles line and offer answers, and the keep going today line exactly as step 2 gives it, and without the preview, which the first coordinator's message already gave. It rebuilds the frontier from the tracker. For named tickets, its brief names only those not yet shipped, in the original order. Write nothing to the user before the dispatch. Once the call returns, tell the user, in place of step 2's message, in one message, in this order:
+7. **Hand over.** When the hand-back is **budget reached**, its next ticket shows the frontier still has a ready one: without asking, dispatch a fresh coordinator with step 2's Agent call, numbered one up (`ticket-loop: M1 coordinator 2`), with the same budget, roles line, concurrency mode and limit, all the answered sets so far, and the keep going today line exactly as step 2 gives it, and without the preview, which the first coordinator's message already gave. It rebuilds the frontier from the tracker. For named tickets, its brief names only those not yet shipped, in the original order. Write nothing to the user before the dispatch. Once the call returns, tell the user, in place of step 2's message, in one message, in this order:
    - the hand-back's reports (step 4);
    - the two progress bars step 4 read;
    - one line saying which coordinator took over, with any skipped tickets or ready-for-human notes the hand-back carried.
@@ -148,5 +163,12 @@ Read them before you write anything for the moment they show, and print them:
 8. **Show the stop.** When the hand-back is a **stop condition**, show it, with what the user needs to know or do, then what's next. The run ends here:
    - **The daily cap**, at stop here (step 6) or in a headless run (step 6's last paragraph): step 4's Usage bar gives the use and the limit, so don't repeat the coordinator's figures; give the ticket in hand, left as it is, and what's committed locally and not pushed. A later run picks it up.
    - Anything else: as the coordinator said it.
+
+9. **Relay a parallel offer.** When the hand-back is **parallel offer**, ask the user with one AskUserQuestion that names its tickets, with step 1's two options, Accept first and recommended. Write nothing to the user before the question. Without AskUserQuestion, ask nothing: the answer is decline, and your message says the run took decline because it couldn't ask. Add the answer to the answered sets, and post no comment on a ticket. Then resume the same coordinator with SendMessage, to the agent ID its dispatch returned, with the answer. Don't dispatch a new coordinator for this. Never message the coordinator's own subagents. Once SendMessage returns, tell the user, in one message, in this order:
+   - the hand-back's reports (step 4), if it carried any;
+   - the two progress bars step 4 read;
+   - one line saying their answer and that the coordinator is resumed.
+
+   Write it all out as text every time. End your turn: its next hand-back wakes you, and you go back to step 4.
 
 Stopping the coordinator in the agent list stops the loop. Then write the `hand-back` step to the status file (step 3, End the status). To carry on after any stop or restart, run the same command again; the config and the tickets carry the state.
