@@ -2,6 +2,10 @@
 
 What changes for you, the person running the loop, newest first.
 
+## Unreleased
+
+- The run preview now uses the run name exactly: an issue parent reads `#120: 7 ready, about 2 coordinators.`, and no launcher writes `M120` for it. `M1` is the name of a milestone, not a prefix. ([#12](https://github.com/jhnhnsn/ticket-loop/issues/12))
+
 ## 1.19.0
 
 The coordinator checks the daily cap at each dispatch and ship, and a handover no longer depends on the launcher's reading of the next ticket. Published on its own, between milestones.
