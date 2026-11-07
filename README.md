@@ -275,7 +275,9 @@ Code's model configuration docs). `CLAUDE_CODE_EFFORT_LEVEL`, if set, overrides 
   or `git worktree add`).
 - **Stopping:** stop the coordinator in the agent list to stop the loop.
 - **One running app:** tickets that share one app session, simulator or game engine go one at a
-  time; parallel worktrees only pay off when nothing they test is shared. Wider concurrency is
+  time; parallel worktrees only pay off when nothing they test is shared. In a parallel build,
+  the coordinator brings each worktree's commits to main and removes the worktree; tests,
+  reviews, fixes and decisions then run on main, one ticket at a time. Wider concurrency is
   `/implement-spec`'s job.
 - **After a restart,** run the same command again; the config and the tickets carry the state.
 
