@@ -2,6 +2,10 @@
 
 What changes for you, the person running the loop, newest first.
 
+## Unreleased
+
+- A named run no longer ships a ticket ahead of its blocker. The coordinator now reads the blockers of each named ticket from the tracker before it chooses the next one, also after a handover. If it can't read them, it stops, dispatches nothing, and tells you which ticket and why. ([#11](https://github.com/jhnhnsn/ticket-loop/issues/11))
+
 ## 1.17.0
 
 You can see what a running coordinator does, in the chat and in a status line that doesn't scroll. Published on its own, between milestones.
