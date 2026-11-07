@@ -4,6 +4,7 @@ What changes for you, the person running the loop, newest first.
 
 ## Unreleased
 
+- Parallel builds no longer get the coordinator stuck in a worktree. It never messages a worktree implementer, not even with a decision's answer. Once one reports, the coordinator cherry-picks its commits onto main, checks they all arrived, and removes the worktree and its branch. Review fixes, test failures and decisions then go to a fresh implementer on main, and each push carries only the shipping ticket's commits, so no ticket closes before it ships. ([#34](https://github.com/jhnhnsn/ticket-loop/issues/34))
 - A research note that runs over 300 words is now trimmed and posted, not thrown away. The researcher aims for about 200 words, with its `path:line` pointers first. The coordinator cuts a long note to fit, keeping every pointer and flagged question, and marks it `(trimmed from <n> words)`. The ticket's report counts the pass as `1 research pass (trimmed)`. A note with no pointers is still skipped. ([#33](https://github.com/jhnhnsn/ticket-loop/issues/33))
 
 ## 1.15.0
