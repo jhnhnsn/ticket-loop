@@ -36,6 +36,7 @@ Test hooks:
 - **Cap unreadable:** disable tokencount in the sandbox only, with a sandbox `.claude/settings.local.json` of `{"enabledPlugins": {"tokencount@tokencount": false}}`, so the coordinator can't read the cap. Clean-up removes the file. Never change the user settings or the plugin cache for this.
 - **Low budget:** add a `## Ticket budget` section to the sandbox config with a budget of 1, so a handover comes after the first ticket.
 - **Effort overrides:** give every role in the sandbox config's Models section an effort other than its default (`- Implementer: Sonnet, high effort.`), then read each Agent call's `effort` in the stream-json. Keep `CLAUDE_CODE_EFFORT_LEVEL` unset: it overrides the parameter.
+- **Writing standard:** add a `## Writing` section to the sandbox config with the text `ASD-STE100` to test the writing rule; leave it out to test the default. For the dictionary check, write `ASD-STE100, dictionary at <path>` with the path to the user's own local copy of the PDF (the repo never holds one). Copy the sandbox a `GLOSSARY.md` from this repo's root if the test needs the project terms. Clean-up removes the section and any copied glossary.
 - **Milestone summary:** the sandbox config writes none; to test the milestone stop, set its Changelog to put a finished parent's summary under `## Unreleased`, above its entries.
 
 ## Reference
@@ -67,6 +68,10 @@ Plain sentence-case summaries with no type prefix, as in the history. Body ends 
 ## Concurrency
 
 One ticket at a time by default. When the frontier has two or more ready tickets that don't block each other, suggest building them in parallel worktrees (at most 2 at once) and ask the user to accept or decline; tests still run one at a time in the main thread.
+
+## Writing
+
+ASD-STE100
 
 ## Daily cap
 

@@ -17,6 +17,8 @@ The **loop config**, `docs/agents/ticket-loop.md`, says how this project's ticke
 
 **Commit messages.** Your commits, such as the loop config's in setup, follow the coordinator's commit message rule ([`agents/coordinator.md`](../../agents/coordinator.md), Commit messages).
 
+**Writing.** When the config's `## Writing` section names `ASD-STE100`, your messages to the user, your questions and the preview's prose follow the coordinator's writing rule ([`agents/coordinator.md`](../../agents/coordinator.md), Writing rule); the bars and the roles line stay as they are. So do the comments you post on tickets. Without the section, write as usual.
+
 ## Roles
 
 The run has five roles: the coordinator, the researcher, the implementer, the Standards reviewer and the Spec reviewer. Each takes its model and its **effort** from the config's Models section (`Implementer: Opus, low effort.`). Whoever dispatches a role passes its effort as the Agent tool's `effort` parameter (`low`, `medium`, `high`, `xhigh`, `max`): you for the coordinator, the coordinator for the researchers, implementers and reviewers. The config is the user's explicit choice of effort, so pass it. `usual` means the role is dispatched without an `effort` parameter, at its usual effort.

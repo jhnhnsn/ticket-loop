@@ -121,6 +121,7 @@ question carrying its drafted answer so "yes" accepts it:
 | Concurrency | one ticket at a time, or parallel worktrees |
 | Daily cap | the share of your plan's weekly usage one day may take (one day's share, 14.3%, by default), and whether it's rolling or per day (rolling if its text starts with `Rolling:`, otherwise per day) |
 | Ticket budget | the most tickets one coordinator ships before a fresh one takes over (4 by default) |
+| Writing | the standard the agents write in: plain English, no standard, by default, or `ASD-STE100` (see [Writing](#writing)), with an optional path to your own copy of its dictionary |
 
 The answers go to **`docs/agents/ticket-loop.md`**, the loop config, with a pointer line in
 CLAUDE.md; both are committed. Every later run reads it. Edit it to change an answer, or delete
@@ -264,6 +265,28 @@ Coordinator: Opus, medium · Researcher: Haiku, usual (opt-in) · Implementer: O
 Per-role effort needs Claude Code 2.1.292 or later. A model runs the highest level it supports
 at or below the one asked for, and some older models don't support effort at all (see Claude
 Code's model configuration docs). `CLAUDE_CODE_EFFORT_LEVEL`, if set, overrides every role's.
+
+## Writing
+
+Off by default. Add a `## Writing` section to the loop config with the text `ASD-STE100`, and
+the agents write in [ASD-STE100 Simplified Technical English, Issue
+9](https://www.asd-ste100.org/assets/files/ASD-STE100_ISSUE9.pdf): the main thread's messages
+and questions (the bars and roles line stay as they are), the coordinator's briefs, hand-backs
+and reports, the implementer and reviewer reports, research notes, and ticket comments and
+tickets filed in a run. Code, test names, quoted text and commit messages aren't covered. The
+coordinator's definition states the rules that can be checked without the dictionary, in our
+own words: short sentences (20 words for an instruction, 25 for a description), one
+instruction per sentence, active voice, short paragraphs, simple tenses, short noun clusters,
+one word for one meaning.
+
+The standard is copyrighted by ASD, and its PDF forbids copying text, so the plugin only names
+and links it, and never copies, extracts or converts its rules or dictionary. Words are checked
+only against a local copy you download yourself: write
+`ASD-STE100, dictionary at ~/Documents/ASD-STE100_ISSUE9.pdf`, and the Standards reviewer reads
+the dictionary pages for the words it doubts, as a person would, and lists unapproved words
+with their approved alternatives. Without a path, words aren't checked. Your project's own
+terms (ticket, coordinator, commit) are technical words the check allows: list them, one line
+each, in a root `GLOSSARY.md`, as [this repo's](GLOSSARY.md) does.
 
 ## Tips
 
