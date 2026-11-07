@@ -2,6 +2,10 @@
 
 What changes for you, the person running the loop, newest first.
 
+## Unreleased
+
+- At a handover, the launcher now starts the fresh coordinator before it reads any ticket, and it doesn't judge the next ticket. A decision on that ticket comes from the fresh coordinator, as a decision needed hand-back. ([#21](https://github.com/jhnhnsn/ticket-loop/issues/21))
+
 ## 1.18.0
 
 Concurrency has three modes, and suggest and ask can offer a parallel build mid-run. A named run no longer ships a ticket ahead of its blocker, and the plugin has an MIT licence. Published on its own, between milestones.
