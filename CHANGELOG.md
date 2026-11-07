@@ -2,7 +2,9 @@
 
 What changes for you, the person running the loop, newest first.
 
-## Unreleased
+## 1.18.0
+
+Concurrency has three modes, and suggest and ask can offer a parallel build mid-run. A named run no longer ships a ticket ahead of its blocker, and the plugin has an MIT licence. Published on its own, between milestones.
 
 - The config's Concurrency section now has three modes, each with a limit where it builds in parallel: `One at a time.`, `Suggest and ask: at most 2 at once.` and `Parallel worktrees: at most 2 at once.` In suggest and ask, the run asks you once about each set of independent ready tickets, before the build or through a new parallel offer hand-back, and doesn't ask again about a set you answered. A headless run can't ask, so it takes decline and says so in its report. A parallel build's whole set finishes before the ticket budget check. Older configs keep working: `Parallel worktrees when independent.` and `One at a time, or parallel worktrees when offered.` read as suggest and ask, and `One ticket per run.` or no section reads as one at a time. Headless runs of the modes passed. The question, the parallel offer hand-back and the answered sets haven't run in an interactive session yet, so tell us if they misbehave. ([#7](https://github.com/jhnhnsn/ticket-loop/issues/7))
 - The plugin now has an MIT licence: a `LICENSE` file at the root and a `license` field in `plugin.json`. The plugin directory no longer refuses a submission for a missing licence. ([#8](https://github.com/jhnhnsn/ticket-loop/issues/8))
