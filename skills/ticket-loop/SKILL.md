@@ -90,6 +90,8 @@ Read them before you write anything for the moment they show, and print them:
 
    With the section in the config, don't ask again.
 
+   Without AskUserQuestion (a headless run), skip the offer and go on to step 1: write no `## Status line` section, change no settings and no `.gitignore`, and commit nothing for the offer. The next interactive run asks. If you mention the skip, give the headless session as the reason, not uncommitted edits or any other state of the repo.
+
 1. **Resolve the argument.** Work out from the config's tracker what the run is: a parent, or the tickets named, in the order given. With no argument, take the parent the config says to work next, and say which. Check each issue or milestone exists; if one doesn't, say so and stop, dispatching nothing.
 
    In suggest and ask mode (see Concurrency above), ask the **offer question** now, since the coordinator can't ask:
