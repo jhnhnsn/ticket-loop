@@ -13,9 +13,17 @@ The argument is either a parent or one or more tickets (`/ticket-loop 120`, `/ti
 
 The **loop config**, `docs/agents/ticket-loop.md`, says how this project's tickets are found, built, tested, shipped and written up, and which model and effort run each role. Both roles read it.
 
-**Bash rules.** You follow the coordinator's Bash rules ([`agents/coordinator.md`](../../agents/coordinator.md), Bash rules), in setup too: change files with Edit or Write, one plain command per Bash call with no chains, loops, variables or pipes of any kind, tickets read with the config's read command, tokencount run as its skill says. A refused command means rewrite it simpler and try again.
+**Bash rules.** You follow the coordinator's Bash rules ([`agents/coordinator.md`](../../agents/coordinator.md), Bash rules), in setup too: change files with Edit or Write, one plain command per Bash call with no chains, loops, variables or pipes of any kind, tickets read with the config's read command except the state read below, tokencount run as its skill says. A refused command means rewrite it simpler and try again.
 
-The **state read** is the one exception to the config's read command. Use it to resolve the argument, count the run, draw the Tickets bar and ask the offer question (steps 1 and 2, Progress). It reads only a ticket's state and labels, from the repo or project the config names. For GitHub, it is `gh issue view <n> --repo <repo> --json state,labels`. For another tracker, it is the narrowest read the tracker gives. To list a parent's tickets, ask for their numbers, states and labels only. Don't read a ticket's body for these jobs. The blockers read for the offer question stays as step 1 gives it. A read for a user's question or a decision comment uses the config's read command.
+The **state read** is the one exception to the config's read command. Use it to resolve the argument, count the run, draw the Tickets bar and find the offer question's ready tickets (step 1, Progress). It reads only a ticket's state and labels, from the repo or project the config names. For GitHub, it is `gh issue view <n> --repo <repo> --json state,labels`. For another tracker, it is the narrowest read the tracker gives.
+
+Three more narrow reads go with it. On another tracker, use the narrowest read that gives the same answer. For GitHub:
+
+- **Parent or ticket:** `gh issue view <n> --repo <repo> --json subIssuesSummary`. A `total` above 0 is a parent.
+- **A parent's tickets:** `gh issue list --repo <repo> --state all --limit 500 --search "parent-issue:<repo>#<n>" --json number,state,labels`. For a milestone, use `--milestone "<name>"` in place of `--search`.
+- **No argument:** `gh issue list --repo <repo> --state open --limit 500 --json number,subIssuesSummary`. The oldest parent is the lowest number with a `total` above 0.
+
+Don't read a ticket's body for these jobs. The state read covers the ready tickets only: the blockers read for the offer question is a separate read, as step 1 gives it, and it can read a body on a tracker that keeps blockers there. A read for a user's question or a decision comment uses the config's read command.
 
 **Commit messages.** Your commits, such as the loop config's in setup, follow the coordinator's commit message rule ([`agents/coordinator.md`](../../agents/coordinator.md), Commit messages).
 
@@ -94,7 +102,7 @@ Read them before you write anything for the moment they show, and print them:
 
    Without AskUserQuestion (a headless run), skip the offer and go on to step 1: write no `## Status line` section, change no settings and no `.gitignore`, and commit nothing for the offer. The next interactive run asks. If you mention the skip, give the headless session as the reason, not uncommitted edits or any other state of the repo.
 
-1. **Resolve the argument.** Work out from the config's tracker what the run is: a parent, or the tickets named, in the order given. With no argument, take the parent the config says to work next, and say which. Check each issue or milestone exists; if one doesn't, say so and stop, dispatching nothing. For this step and its count, read each ticket with the state read (see Bash rules above): the state and labels only, never the body. Don't judge a ticket here: that is the coordinator's work.
+1. **Resolve the argument.** Work out from the config's tracker what the run is: a parent, or the tickets named, in the order given. With no argument, take the parent the config says to work next, and say which. Check each issue or milestone exists; if one doesn't, say so and stop, dispatching nothing. For this step and its count, the blockers read excepted, read each ticket with the state read (see Bash rules above): the state and labels only, never the body.
 
    In suggest and ask mode (see Concurrency above), ask the **offer question** now, since the coordinator can't ask:
    - Read the blockers of the run's ready tickets, as the config's tracker says, and work out the parallel set. With no set, ask nothing.
