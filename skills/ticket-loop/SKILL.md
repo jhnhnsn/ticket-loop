@@ -15,6 +15,8 @@ The **loop config**, `docs/agents/ticket-loop.md`, says how this project's ticke
 
 **Bash rules.** You follow the coordinator's Bash rules ([`agents/coordinator.md`](../../agents/coordinator.md), Bash rules), in setup too: change files with Edit or Write, one plain command per Bash call with no chains, loops, variables or pipes of any kind, tickets read with the config's read command, tokencount run as its skill says. A refused command means rewrite it simpler and try again.
 
+The **state read** is the one exception to the config's read command. Use it to resolve the argument, count the run, draw the Tickets bar and ask the offer question (steps 1 and 2, Progress). It reads only a ticket's state and labels, from the repo or project the config names. For GitHub, it is `gh issue view <n> --repo <repo> --json state,labels`. For another tracker, it is the narrowest read the tracker gives. To list a parent's tickets, ask for their numbers, states and labels only. Don't read a ticket's body for these jobs. The blockers read for the offer question stays as step 1 gives it. A read for a user's question or a decision comment uses the config's read command.
+
 **Commit messages.** Your commits, such as the loop config's in setup, follow the coordinator's commit message rule ([`agents/coordinator.md`](../../agents/coordinator.md), Commit messages).
 
 **Writing.** When the config's `## Writing` section names `ASD-STE100`, your messages to the user, your questions and the preview's prose follow the coordinator's writing rule ([`agents/coordinator.md`](../../agents/coordinator.md), Writing rule); the bars and the roles line stay as they are. So do the comments you post on tickets. Without the section, write as usual.
@@ -58,7 +60,7 @@ Usage    [████░░░░░░] 6.1% of the week today, cap 14.3%
 
 With a rolling cap, the Usage line reads `Usage    [█████░░░░░] 15.0% of the week so far, allowance 28.6% (day 2 of 7)`.
 
-- **Tickets:** for a parent, its tickets (an issue's sub-issues, or a milestone's issues), open or closed, are the total; the closed ones are shipped. For named tickets, the total is the tickets the user named for the run, and the shipped are the named ones that are closed; after a handover, the total is still the run's original named set, not the fresh coordinator's shorter list.
+- **Tickets:** for a parent, its tickets (an issue's sub-issues, or a milestone's issues), open or closed, are the total; the closed ones are shipped. For named tickets, the total is the tickets the user named for the run, and the shipped are the named ones that are closed; after a handover, the total is still the run's original named set, not the fresh coordinator's shorter list. Get the state of each ticket with the state read (see Bash rules above), never a read of its body.
 - **Usage:** the use against the limit from the Skill tool's `tokencount:tokencount` `--json` report, worked out for the config's mode exactly as the coordinator's Daily cap section says ([`agents/coordinator.md`](../../agents/coordinator.md)), each to one decimal. The bars never stop the run: the coordinator's own cap check does that.
   - **Per day** (the config's Daily cap text doesn't start with `Rolling:`): `Usage    [bar] <today.percent_of_week>% of the week today, cap <share>%`.
   - **Rolling** (the text starts with `Rolling:`): `Usage    [bar] <week.percent_used>% of the week so far, allowance <allowance>% (day <d> of 7)`.
@@ -92,7 +94,7 @@ Read them before you write anything for the moment they show, and print them:
 
    Without AskUserQuestion (a headless run), skip the offer and go on to step 1: write no `## Status line` section, change no settings and no `.gitignore`, and commit nothing for the offer. The next interactive run asks. If you mention the skip, give the headless session as the reason, not uncommitted edits or any other state of the repo.
 
-1. **Resolve the argument.** Work out from the config's tracker what the run is: a parent, or the tickets named, in the order given. With no argument, take the parent the config says to work next, and say which. Check each issue or milestone exists; if one doesn't, say so and stop, dispatching nothing.
+1. **Resolve the argument.** Work out from the config's tracker what the run is: a parent, or the tickets named, in the order given. With no argument, take the parent the config says to work next, and say which. Check each issue or milestone exists; if one doesn't, say so and stop, dispatching nothing. For this step and its count, read each ticket with the state read (see Bash rules above): the state and labels only, never the body. Don't judge a ticket here: that is the coordinator's work.
 
    In suggest and ask mode (see Concurrency above), ask the **offer question** now, since the coordinator can't ask:
    - Read the blockers of the run's ready tickets, as the config's tracker says, and work out the parallel set. With no set, ask nothing.
