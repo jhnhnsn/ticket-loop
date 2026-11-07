@@ -38,6 +38,8 @@ This project's own terms. With a `## Writing` section of `ASD-STE100`, they are 
 - **preview:** the launcher's first lines of a run: the ready count, the progress bars and the roles line.
 - **roles line:** the line that gives each role's model and effort.
 - **progress bar:** one of the two ten-cell bars for tickets shipped and usage.
+- **status line:** the line under Claude Code's input box that the plugin's `scripts/ticket-loop-statusline` script prints.
+- **compact roles:** the short roles line form in the status file, such as `Opus/med`, one field per role.
 
 ### Limits
 
@@ -50,6 +52,7 @@ This project's own terms. With a `## Writing` section of `ASD-STE100`, they are 
 ### Files and records
 
 - **loop config:** `docs/agents/ticket-loop.md`, the project's settings for the loop.
+- **status file:** `.ticket-loop-status` at the main checkout's root, the coordinator's one-line state; git ignores it.
 - **changelog:** `CHANGELOG.md`, the record of what each shipped ticket changed.
 - **ADR:** an architecture decision record, in `docs/adr/`.
 - **glossary:** this file.

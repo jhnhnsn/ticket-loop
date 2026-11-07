@@ -83,6 +83,107 @@ class Render(unittest.TestCase):
         self.assertIn("Tickets [███████░░░] 2/3", sl.render(two_of_three, FRESH, NOW, None, ROLLING))
 
 
+class StatusPath(unittest.TestCase):
+    def test_main_checkout_root(self):
+        self.assertEqual(sl.status_path("/r/app/.git"), "/r/app/.ticket-loop-status")
+
+    def test_linked_worktree_uses_the_main_checkout(self):
+        # A linked worktree's --git-common-dir is still the main checkout's .git.
+        self.assertEqual(sl.status_path("/r/app/.git/"), "/r/app/.ticket-loop-status")
+
+    def test_no_git_dir(self):
+        self.assertIsNone(sl.status_path(None))
+
+
+class UsageCache(unittest.TestCase):
+    def setUp(self):
+        import tempfile
+        self.dir = tempfile.mkdtemp()
+        self.cache = os.path.join(self.dir, "usage.json")
+        self.spawned = []
+
+    def write_cache(self, age):
+        import json
+        with open(self.cache, "w") as f:
+            json.dump(REPORT, f)
+        t = NOW.timestamp() - age
+        os.utime(self.cache, (t, t))
+
+    def test_cache_name_is_per_user(self):
+        self.assertIn(str(os.getuid()), os.path.basename(sl.cache_path()))
+
+    def test_old_cache_still_prints_and_refreshes_in_the_background(self):
+        self.write_cache(600)
+        got = sl.read_usage(self.cache, NOW.timestamp(), lambda: self.spawned.append(1))
+        self.assertEqual(got, REPORT)
+        self.assertEqual(self.spawned, [1])
+
+    def test_fresh_cache_does_not_refresh(self):
+        self.write_cache(10)
+        got = sl.read_usage(self.cache, NOW.timestamp(), lambda: self.spawned.append(1))
+        self.assertEqual(got, REPORT)
+        self.assertEqual(self.spawned, [])
+
+    def test_no_cache_returns_nothing_and_refreshes(self):
+        got = sl.read_usage(self.cache, NOW.timestamp(), lambda: self.spawned.append(1))
+        self.assertIsNone(got)
+        self.assertEqual(self.spawned, [1])
+
+    def test_a_refresh_in_progress_is_not_started_again(self):
+        self.write_cache(600)
+        lock = self.cache + ".lock"
+        open(lock, "w").close()
+        t = NOW.timestamp() - 5
+        os.utime(lock, (t, t))
+        sl.read_usage(self.cache, NOW.timestamp(), lambda: self.spawned.append(1))
+        self.assertEqual(self.spawned, [])
+
+
+class BadTimes(unittest.TestCase):
+    def test_bad_resets_at_drops_the_usage_bar(self):
+        bad = {"usage_source": "live", "week": {"percent_used": 43.0, "resets_at": "soon"}}
+        self.assertEqual(sl.render(None, None, NOW, bad, ROLLING), "")
+
+    def test_naive_resets_at_is_utc(self):
+        naive = {"usage_source": "live",
+                 "week": {"percent_used": 43.0, "resets_at": "2026-11-10T07:00:00"}}
+        self.assertEqual(sl.render(None, None, NOW, naive, ROLLING),
+                         "Usage [████████░░] 43.0%/57.2% d4")
+
+    def test_parse_time(self):
+        self.assertIsNone(sl.parse_time("nope"))
+        self.assertIsNone(sl.parse_time(None))
+        self.assertEqual(sl.parse_time("2026-11-06T20:00:00"), NOW)
+
+
+class Main(unittest.TestCase):
+    def run_main(self, argv, env=None):
+        import io
+        import contextlib
+        import sys
+        out, err = io.StringIO(), io.StringIO()
+        old = dict(os.environ)
+        os.environ.update(env or {})
+        old_stdin = sys.stdin
+        sys.stdin = io.StringIO('{"cwd": "/nonexistent"}')
+        try:
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                sl.main(argv)
+        finally:
+            sys.stdin = old_stdin
+            os.environ.clear()
+            os.environ.update(old)
+        return out.getvalue(), err.getvalue()
+
+    def test_bad_now_prints_nothing_and_no_traceback(self):
+        out, err = self.run_main([], {"TICKET_LOOP_NOW": "bad", "TICKET_LOOP_USAGE_JSON": "/none"})
+        self.assertEqual((out, err), ("", ""))
+
+    def test_with_and_no_command_gives_a_usage_note(self):
+        out, err = self.run_main(["--with"], {"TICKET_LOOP_USAGE_JSON": "/none"})
+        self.assertIn("usage", err.lower())
+
+
 class CapSection(unittest.TestCase):
     def test_reads_the_daily_cap_section(self):
         cfg = "# Loop config\n\n## Daily cap\n\nRolling: 14.3% a day.\n\n## Other\n\nx\n"

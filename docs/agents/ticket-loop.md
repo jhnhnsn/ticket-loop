@@ -14,7 +14,7 @@ Next is the first open sub-issue, in the parent's sub-issue order, whose blocker
 
 ## Checks
 
-`claude plugin validate .` (exit code is the verdict; warnings don't fail it).
+`claude plugin validate .` (exit code is the verdict; warnings don't fail it), and `python3 -m unittest discover -s scripts -p 'test_*.py'` (the status line script's tests).
 
 ## Test queue
 
@@ -37,7 +37,7 @@ Test hooks:
 - **Low budget:** add a `## Ticket budget` section to the sandbox config with a budget of 1, so a handover comes after the first ticket.
 - **Effort overrides:** give every role in the sandbox config's Models section an effort other than its default (`- Implementer: Sonnet, high effort.`), then read each Agent call's `effort` in the stream-json. Keep `CLAUDE_CODE_EFFORT_LEVEL` unset: it overrides the parameter.
 - **Writing standard:** add a `## Writing` section to the sandbox config with the text `ASD-STE100` to test the writing rule; leave it out to test the default. For the dictionary check, write `ASD-STE100, dictionary at <path>` with the path to the user's own local copy of the PDF (the repo never holds one). Copy the sandbox a `GLOSSARY.md` from this repo's root if the test needs the project terms. Clean-up removes the section and any copied glossary.
-- **Status line script:** run `scripts/ticket-loop-statusline` with no stdin, or with `--with '<command>'`. Set `TICKET_LOOP_USAGE_JSON` to a saved tokencount `--json` report and `TICKET_LOOP_NOW` to an ISO time to fix its input. Write a sample `.git/ticket-loop-status` to show a run. Unit tests: `python3 -m unittest discover -s scripts -p 'test_*.py'`.
+- **Status line script:** run `scripts/ticket-loop-statusline` with no stdin, or with `--with '<command>'`. Set `TICKET_LOOP_USAGE_JSON` to a saved tokencount `--json` report and `TICKET_LOOP_NOW` to an ISO time to fix its input. Write a sample `.ticket-loop-status` at the repo root to show a run (the repo's `.gitignore` lists it). Unit tests: `python3 -m unittest discover -s scripts -p 'test_*.py'`.
 - **Milestone summary:** the sandbox config writes none; to test the milestone stop, set its Changelog to put a finished parent's summary under `## Unreleased`, above its entries.
 
 ## Reference

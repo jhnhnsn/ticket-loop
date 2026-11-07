@@ -29,26 +29,34 @@ Call the Skill tool with `mattpocock-skills:grilling`. The design tree's root qu
 
 Done when the grilling's frontier is empty and the user confirms the answers.
 
-## 2a. Offer the status line
+## 3. Offer the status line
 
-The plugin has a status line script, `scripts/ticket-loop-statusline`. It shows the ticket, step, Tickets and Usage bars and compact roles under the input box. With no run, it shows only the Usage bar. A plugin can't change user settings by itself, so ask the user first, with AskUserQuestion. Recommend yes.
+The plugin has a status line script, `scripts/ticket-loop-statusline`. It shows the ticket, step, Tickets and Usage bars and compact roles under the input box. With no run, it shows only the Usage bar. A plugin can't change user settings by itself. Ask the user first, with AskUserQuestion, and recommend yes.
 
 If the user says yes:
 
 1. Read the `statusLine` setting in `~/.claude/settings.json`.
-2. Use `<plugin root>/scripts/ticket-loop-statusline` as the script, with the plugin root of the installed plugin (the marketplace clone, `~/.claude/plugins/marketplaces/ticket-loop`, keeps the latest version).
+2. Use this shell text as `<script>`. It finds the newest installed version at each refresh, so it follows plugin updates:
+   `"$(ls -d ~/.claude/plugins/cache/ticket-loop/ticket-loop/*/ | sort -V | tail -n 1)scripts/ticket-loop-statusline"`
+   Don't use the marketplace clone, because it follows `main`, not the installed version.
 3. With no `statusLine`, propose `{"type": "command", "command": "python3 <script>", "refreshInterval": 5}`.
-4. With a `statusLine` of type `command`, keep the user's command. Propose `python3 <script> --with '<their command>'`. Their line comes first, then the loop's line. Keep their `padding`, and set `refreshInterval` to 5 if it is not set or is more than 5.
-5. Show the user the old value and the new value. Ask again before you write.
-6. Write only the `statusLine` key with the Edit tool, and change nothing else in the file.
+4. With a `statusLine` of type `command`, keep the user's command. Propose `python3 <script> --with '<their command>'`.
+5. In their command, write each single quote as `'\''`. Otherwise a single quote ends the `--with` text too early.
+6. Keep their `padding`. Set `refreshInterval` to 5 if it is not set or is more than 5.
+7. In the JSON value, write each `"` as `\"` and each `\` as `\\`.
+8. Show the user the old value and the new value. Their line comes first, then the loop's line.
+9. Ask again before you write.
+10. Write only the `statusLine` key with the Edit tool. Change nothing else in the file.
 
-If the user says no, or the setting has a type other than `command`, change nothing. Tell the user how to add it later.
+If the user says no, or the setting has a type other than `command`, change nothing. Tell the user how to add it later. Step 4 records the answer in the config.
 
-## 3. Write it
+## 4. Write it
 
-Write `docs/agents/ticket-loop.md` with one short section per question above, in that order, each the confirmed answer in a few lines: commands in backticks, files as paths, no rationale beyond a clause. The Tickets section has a line `Read a ticket: <read command>.` In the Test queue section, list the test hooks the app has. Add a pointer line to CLAUDE.md's agent docs (`Ticket loop: see docs/agents/ticket-loop.md`). Commit both. To change the config later, edit the file; to redo it, delete it and run the loop again.
+Write `docs/agents/ticket-loop.md` with one short section per question above, in that order, each the confirmed answer in a few lines: commands in backticks, files as paths, no rationale beyond a clause. The Tickets section has a line `Read a ticket: <read command>.` In the Test queue section, list the test hooks the app has. Last, add a `## Status line` section with the answer from step 3: `Added.`, `Declined.` or `Not added: the statusLine type is not command.`
 
-## 4. Prove the loop closes
+Add the line `.ticket-loop-status` to the repo's `.gitignore`, so the status file never goes into a commit. Make the file if it does not exist. Add a pointer line to CLAUDE.md's agent docs (`Ticket loop: see docs/agents/ticket-loop.md`). Commit the three files. To change the config later, edit the file; to redo it, delete it and run the loop again.
+
+## 5. Prove the loop closes
 
 Prove each of the six legs (Check, Run, Drive, Ship, Record, Cap) by doing it, as [`CLOSED-LOOP.md`](CLOSED-LOOP.md) says.
 

@@ -99,8 +99,9 @@ yours, and stops only when it needs you and at the end of each milestone.
    the main thread at any time. Push and publish commands ask permission in your main session,
    naming the agent, unless your settings allow them; allow them to keep the loop unattended.
 
-   **While a run goes on**, the coordinator writes its state to `.git/ticket-loop-status`, one
-   line at each step change. Git ignores the file. When Claude Code says that a coordinator
+   **While a run goes on**, the coordinator writes its state to `.ticket-loop-status` at the
+   root of the main checkout, one line at each step change. Setup adds the file to your
+   `.gitignore`, so it never goes into a commit. When Claude Code says that a coordinator
    "is waiting on its own background work", the main thread reads the file and writes one line:
 
    ```
@@ -111,19 +112,27 @@ yours, and stops only when it needs you and at the end of each milestone.
    With no status file, it says that it has no status yet.
 
    **The status line.** The plugin has a status line script, `scripts/ticket-loop-statusline`,
-   for Claude Code's `statusLine` setting. Setup offers to add it, shows you the change, and
-   keeps your own status line in front of it. The line stays under the input box, and it
-   refreshes every 5 seconds:
+   for Claude Code's `statusLine` setting. Setup offers to add it and shows you the change
+   first. Your own status line stays in front of it. The line stays under the input box, and
+   it refreshes every 5 seconds. If your config is older, the loop offers it once:
 
    ```
    #121 test queue · Tickets [░░░░░░░░░░] 0/1 · Usage [████████░░] 43.0%/57.2% d4 · Opus/med · Haiku/usual opt-in · Opus/low · Sonnet · Opus/high
    ```
 
-   With no run, it shows only the Usage bar, or nothing if tokencount can't tell. A run is
-   over when the file's last step is `hand-back`, or the file is 12 hours old. The script makes
-   no GitHub call: the ticket counts come from the file. To add it by hand, set
-   `"statusLine": {"type": "command", "command": "python3 <plugin root>/scripts/ticket-loop-statusline", "refreshInterval": 5}`.
-   To keep a status line you have, add `--with '<your command>'` after the script.
+   With no run, it shows only the Usage progress bar, or nothing if tokencount can't tell. A
+   run is over when the file's last step is `hand-back`. The main thread writes that step when
+   a run stops, also when you stop the coordinator. A file 12 hours old also counts as over.
+   The script makes no GitHub call: the ticket counts come from the file. The Usage progress
+   bar shows the last tokencount report, which the script refreshes in the background each
+   minute. To add it by hand, set `statusLine` to this (it finds the newest installed version):
+
+   ```json
+   {"type": "command", "command": "python3 \"$(ls -d ~/.claude/plugins/cache/ticket-loop/ticket-loop/*/ | sort -V | tail -n 1)scripts/ticket-loop-statusline\"", "refreshInterval": 5}
+   ```
+
+   To keep a status line you have, add `--with '<your command>'` after the script. In your
+   command, write each single quote as `'\''`.
 
 ## First run
 

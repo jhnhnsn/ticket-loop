@@ -2,8 +2,9 @@
 """ticket-loop status line for Claude Code's `statusLine` setting.
 
 Reads Claude Code's JSON on stdin, the coordinator's status file
-(`.git/ticket-loop-status`), the loop config's Daily cap section and a
-tokencount `--json` report, and prints one line. Makes no GitHub call.
+(`.ticket-loop-status` at the main checkout's root), the loop config's Daily cap
+section and the last cached tokencount `--json` report, and prints one line.
+Makes no GitHub call. An old cache is refreshed by a detached child process.
 
 Usage in settings: {"type": "command", "command": "python3 <this file>", "refreshInterval": 5}
 To keep an existing status line: python3 <this file> --with '<their command>'
@@ -27,6 +28,8 @@ from datetime import datetime, timedelta, timezone
 SEP = " · "
 STALE_SECONDS = 12 * 3600
 USAGE_CACHE_SECONDS = 60
+LOCK_SECONDS = 90
+STATUS_FILE = ".ticket-loop-status"
 STATUS_RE = re.compile(r"^(\d+)/(\d+) shipped$")
 
 
@@ -43,6 +46,25 @@ def parse_status(text):
     return {"ticket": parts[0], "step": parts[1], "now": parts[2],
             "since": parts[3][len("since "):], "shipped": int(m.group(1)),
             "total": int(m.group(2)), "roles": parts[5:]}
+
+
+def parse_time(text):
+    """An ISO time as an aware datetime (a naive one is UTC), or None if it is bad."""
+    try:
+        t = datetime.fromisoformat(text)
+    except (TypeError, ValueError):
+        return None
+    return t if t.tzinfo else t.replace(tzinfo=timezone.utc)
+
+
+def status_path(common_dir):
+    """The status file at the main checkout's root, from `git rev-parse --git-common-dir`.
+
+    A linked worktree shares the main checkout's common dir, so it reads the same file.
+    """
+    if not common_dir:
+        return None
+    return os.path.join(os.path.dirname(common_dir.rstrip("/")), STATUS_FILE)
 
 
 def bar(use, limit):
@@ -72,10 +94,10 @@ def usage_part(report, cap, now):
         return None if use is None else "Usage %s %.1f%% week" % (bar(use, 100), use)
     share = _share(cap)
     if cap.startswith("Rolling:"):
-        use, resets = week.get("percent_used"), week.get("resets_at")
-        if use is None or not resets:
+        use, resets = week.get("percent_used"), parse_time(week.get("resets_at"))
+        if use is None or resets is None:
             return None
-        start = datetime.fromisoformat(resets) - timedelta(days=7)
+        start = resets - timedelta(days=7)
         day = max(1, min(7, int((now - start).total_seconds() // 86400) + 1))
         allowance = min(100.0, share * day)
         return "Usage %s %.1f%%/%.1f%% d%d" % (bar(use, allowance), use, allowance, day)
@@ -114,7 +136,74 @@ def _find_tokencount():
     return max(found, key=version) if found else None
 
 
-def read_usage():
+def cache_path():
+    """The usage cache, one per user in the temp directory."""
+    return os.path.join(tempfile.gettempdir(),
+                        "ticket-loop-statusline-usage-%d.json" % os.getuid())
+
+
+def _age(path, now):
+    try:
+        return now - os.path.getmtime(path)
+    except OSError:
+        return None
+
+
+def read_usage(cache, now, spawn):
+    """The last cached report, of any age. Calls spawn() to refresh an old or missing cache.
+
+    tokencount --json can take longer than the refresh interval, so the line never waits
+    on it: a detached child writes the cache, and the next refresh shows it.
+    """
+    report = None
+    try:
+        with open(cache) as f:
+            report = json.load(f)
+    except (OSError, ValueError):
+        pass
+    age = _age(cache, now)
+    lock_age = _age(cache + ".lock", now)
+    if (age is None or age >= USAGE_CACHE_SECONDS) and (lock_age is None or lock_age >= LOCK_SECONDS):
+        spawn()
+    return report
+
+
+def _spawn_refresh(cache):
+    def spawn():
+        try:
+            with open(cache + ".lock", "w"):
+                pass
+            subprocess.Popen([sys.executable, os.path.abspath(__file__), "--refresh-usage", cache],
+                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL, start_new_session=True)
+        except OSError:
+            pass
+    return spawn
+
+
+def refresh_usage(cache):
+    """Run tokencount --json and write its report to the cache (the detached child)."""
+    try:
+        tc = _find_tokencount()
+        if not tc:
+            return
+        out = subprocess.run([sys.executable, tc, "--json"], capture_output=True,
+                             text=True, timeout=60).stdout
+        report = json.loads(out)
+        tmp = "%s.%d.tmp" % (cache, os.getpid())
+        with open(tmp, "w") as f:
+            json.dump(report, f)
+        os.replace(tmp, cache)
+    except Exception:
+        pass
+    finally:
+        try:
+            os.remove(cache + ".lock")
+        except OSError:
+            pass
+
+
+def _usage():
     env = os.environ.get("TICKET_LOOP_USAGE_JSON")
     if env:
         try:
@@ -122,28 +211,8 @@ def read_usage():
                 return json.load(f)
         except (OSError, ValueError):
             return None
-    cache = os.path.join(tempfile.gettempdir(), "ticket-loop-statusline-usage.json")
-    try:
-        if time.time() - os.path.getmtime(cache) < USAGE_CACHE_SECONDS:
-            with open(cache) as f:
-                return json.load(f)
-    except (OSError, ValueError):
-        pass
-    tc = _find_tokencount()
-    if not tc:
-        return None
-    try:
-        out = subprocess.run([sys.executable, tc, "--json"], capture_output=True,
-                             text=True, timeout=20).stdout
-        report = json.loads(out)
-    except (OSError, ValueError, subprocess.SubprocessError):
-        return None
-    try:
-        with open(cache, "w") as f:
-            json.dump(report, f)
-    except OSError:
-        pass
-    return report
+    cache = cache_path()
+    return read_usage(cache, time.time(), _spawn_refresh(cache))
 
 
 def _git_dir(cwd):
@@ -164,7 +233,10 @@ def _read(path):
         return None, None
 
 
-def main(argv):
+def _main(argv):
+    if len(argv) == 2 and argv[0] == "--refresh-usage":
+        refresh_usage(argv[1])
+        return
     stdin = sys.stdin.read()
     try:
         data = json.loads(stdin or "{}")
@@ -173,23 +245,36 @@ def main(argv):
     ws = data.get("workspace") or {}
     cwd = ws.get("project_dir") or ws.get("current_dir") or data.get("cwd") or os.getcwd()
     now_env = os.environ.get("TICKET_LOOP_NOW")
-    now = datetime.fromisoformat(now_env) if now_env else datetime.now(timezone.utc)
+    now = parse_time(now_env) if now_env else datetime.now(timezone.utc)
+    if now is None:
+        return
 
     git_dir, top = _git_dir(cwd)
-    status, mtime = _read(os.path.join(git_dir, "ticket-loop-status")) if git_dir else (None, None)
+    status, mtime = _read(status_path(git_dir)) if git_dir else (None, None)
     config, _ = _read(os.path.join(top, "docs/agents/ticket-loop.md")) if top else (None, None)
-    line = render(status, mtime, now, read_usage(), cap_text(config))
+    line = render(status, mtime, now, _usage(), cap_text(config))
 
-    if len(argv) >= 2 and argv[0] == "--with":
-        try:
-            theirs = subprocess.run(argv[1], shell=True, input=stdin, capture_output=True,
-                                    text=True, timeout=20).stdout.rstrip("\n")
-        except (OSError, subprocess.SubprocessError):
-            theirs = ""
-        if theirs:
-            print(theirs)
+    if argv and argv[0] == "--with":
+        if len(argv) < 2 or not argv[1].strip():
+            sys.stderr.write("usage: ticket-loop-statusline [--with '<command>']\n")
+        else:
+            try:
+                theirs = subprocess.run(argv[1], shell=True, input=stdin, capture_output=True,
+                                        text=True, timeout=20).stdout.rstrip("\n")
+            except (OSError, subprocess.SubprocessError):
+                theirs = ""
+            if theirs:
+                print(theirs)
     if line:
         print(line)
+
+
+def main(argv):
+    """Any error prints nothing: a status line must never show a traceback."""
+    try:
+        _main(argv)
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":

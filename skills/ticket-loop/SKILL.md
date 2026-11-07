@@ -65,7 +65,13 @@ Read them before you write anything for the moment they show, and print them:
 
 ## Steps
 
-0. **Setup.** With no loop config in the repo, run setup first, as [`SETUP.md`](SETUP.md) says. It grills the user, writes the config, and proves the loop closes ([`CLOSED-LOOP.md`](CLOSED-LOOP.md)). Done when `docs/agents/ticket-loop.md` is committed and every leg is closed, or M0's tickets are filed (a stop: tell the user, and dispatch nothing). A loop config written before the daily cap existed has no Daily cap section: ask setup's Daily cap question alone, prove the Cap leg, and add the answer to the config, committed, before dispatching.
+0. **Setup.** With no loop config in the repo, run setup first, as [`SETUP.md`](SETUP.md) says. It grills the user, writes the config, and proves the loop closes ([`CLOSED-LOOP.md`](CLOSED-LOOP.md)). Done when `docs/agents/ticket-loop.md` is committed and every leg is closed, or M0's tickets are filed (a stop: tell the user, and dispatch nothing). A loop config written before the daily cap existed has no Daily cap section: ask setup's Daily cap question alone, prove the Cap leg, and add the answer to the config, committed, before dispatching. In the same way, a loop config with no Status line section gets a one-time offer:
+   - Ask setup's status line offer alone (SETUP.md step 3).
+   - Add the `## Status line` section with the answer, as SETUP.md step 4 says.
+   - If the repo's `.gitignore` does not list `.ticket-loop-status`, add it.
+   - Commit the changed files before you dispatch.
+
+   With the section in the config, don't ask again.
 
 1. **Resolve the argument.** Work out from the config's tracker what the run is: a parent, or the tickets named, in the order given. With no argument, take the parent the config says to work next, and say which. Check each issue or milestone exists; if one doesn't, say so and stop, dispatching nothing. Then ask the config's offers, since the coordinator can't ask: where the config offers parallel worktrees and the run has two or more ready tickets that don't block each other, ask the user to accept or decline. Then count the run for step 2's preview:
    - **Ready count:** its ready tickets (the open ready-for-agent tickets under the parent, blocked or not, since blockers ship as the run goes; or the named tickets that are open and ready-for-agent), then the coordinators they take: the count divided by the ticket budget, rounded up, at least 1 (`M1: 7 ready, about 2 coordinators.`; `#82: 1 ready, about 1 coordinator.`). The ticket budget is the config's Ticket budget; a config without one uses 4, without asking.
@@ -90,15 +96,27 @@ Read them before you write anything for the moment they show, and print them:
 
    Then, in a line, say that the coordinator is running, that the user can watch it (and its test queue) in the agent view, and that the main thread is theirs meanwhile. The user, in a headless run too, sees only what you write as text, so write the preview out every time: lines worked out in your thinking aren't shown. End your turn: its hand-back wakes you.
 
-3. **While it runs**, the main thread is the user's: answer what they ask as usual. The coordinator's tests and commits see the working tree, so code edits during a run belong in a worktree: make none yourself for the loop, and if the user asks for some, suggest a worktree. Asked "how's the agent doing?", answer from the coordinator's latest state without disturbing it. Read the status file first (see Status file below), then the tail of its transcript (the output file its dispatch named), the tracker and `git log`. Don't send it a message for this.
+3. **While it runs**, the main thread is the user's: answer what they ask as usual. The coordinator's tests and commits see the working tree, so code edits during a run belong in a worktree: make none yourself for the loop, and if the user asks for some, suggest a worktree. Asked "how's the agent doing?", answer from the coordinator's latest state without disturbing it. Don't send it a message for this. Read these, in this order:
+   - the status file (see Status file below);
+   - the tail of its transcript (the output file its dispatch named);
+   - the tracker;
+   - `git log`.
 
-   **Status file.** The coordinator writes its state to `.git/ticket-loop-status` in the repo, as one line: `#121 · test queue · running the browser suite · since 14:02 · 0/1 shipped · <compact roles>` ([`agents/coordinator.md`](../../agents/coordinator.md), Status file). Read it with the Read tool.
+   **Status file.** The coordinator writes its state to `.ticket-loop-status` at the root of the main checkout, as one line: `#121 · test queue · running the browser suite · since 14:02 · 0/1 shipped · <compact roles>` ([`agents/coordinator.md`](../../agents/coordinator.md), Status file). To find the root, take the parent folder of `git rev-parse --path-format=absolute --git-common-dir`. Read the file with the Read tool. To get its age, run `date -r <path> +%s` and compare it with `date +%s`.
 
-   **Background notices.** Claude Code can tell you that a coordinator "is waiting on its own background work". For each notice, read the status file and write one line. Give the ticket, its step, what runs now, and the minutes since the `since` time. Add the Tickets bar from the file's counts:
+   **No run.** The launcher and the status line script use the same rule. There is no run when one of these is true:
+   - there is no status file;
+   - its line does not have the six fields;
+   - its step is `hand-back`;
+   - the file is older than 12 hours (a backstop only).
+
+   **End the status.** When the run ends, write the `hand-back` step to the status file. Do this at each stop (steps 5, 6 and 8), and when the coordinator stops or fails without a hand-back. The user can stop it in the agent list, for example. Read the file first, then Write the same line with the step changed to `hand-back`.
+
+   **Background notices.** Claude Code can tell you that a coordinator "is waiting on its own background work". For each notice, read the status file and write one line. Give the ticket, its step, what runs now, and the minutes since the `since` time. Add the Tickets progress bar from the file's counts:
    `#121 is in the test queue, running the browser suite (4 min). Tickets [░░░░░░░░░░] 0 of 1 shipped.`
-   If the step and what runs now are the same as in your last line, write a short line: `Still running the browser suite on #121 (6 min).` If there is no status file, or its last change is older than the coordinator's dispatch, write that you have no status yet. Don't guess.
+   If the step and what runs now are the same as in your last line, write a short line: `Still running the browser suite on #121 (6 min).` If the No run rule is true, write that you have no status yet. Don't guess.
 
-   **Status line.** The plugin has a status line script, `scripts/ticket-loop-statusline`, for Claude Code's `statusLine` setting. Setup offers to add it ([`SETUP.md`](SETUP.md)). It shows the status file and the Usage bar under the input box, and does not scroll. It makes no GitHub call.
+   **Status line.** The plugin has a status line script, `scripts/ticket-loop-statusline`, for Claude Code's `statusLine` setting. Setup offers to add it ([`SETUP.md`](SETUP.md)). It shows the status file and the Usage progress bar under the input box, and does not scroll. It makes no GitHub call.
 
 4. **Show the hand-back.** Each ticket's report it carries (what shipped, how many research passes ran, trimmed ones marked (or research skipped, or research: not requested), decisions they answered and any taken on their behalf, tickets filed), with the two progress bars under the reports, read fresh now (see Progress above). Write them out as text now, or hold them for a later message, as Progress says for this kind of hand-back. Keep none of the coordinator's working detail.
 
@@ -131,4 +149,4 @@ Read them before you write anything for the moment they show, and print them:
    - **The daily cap**, at stop here (step 6) or in a headless run (step 6's last paragraph): step 4's Usage bar gives the use and the limit, so don't repeat the coordinator's figures; give the ticket in hand, left as it is, and what's committed locally and not pushed. A later run picks it up.
    - Anything else: as the coordinator said it.
 
-Stopping the coordinator in the agent list stops the loop. To carry on after any stop or restart, run the same command again; the config and the tickets carry the state.
+Stopping the coordinator in the agent list stops the loop. Then write the `hand-back` step to the status file (step 3, End the status). To carry on after any stop or restart, run the same command again; the config and the tickets carry the state.

@@ -66,16 +66,24 @@ Verified on Claude Code 2.1.316; see [ADR-0001](../docs/adr/0001-coordinator-dis
 
 ## Status file
 
-The status file tells the launcher and the status line what you do now. It is `.git/ticket-loop-status` in the main checkout of the repo you run in. Git ignores it, so it never goes into a commit or the working tree.
+The status file tells the launcher and the status line what you do now. It is `.ticket-loop-status` at the root of the main checkout of the repo you run in. The repo's `.gitignore` lists it, so it never goes into a commit.
 
-- Write it with the Write tool at each step change, and when the thing that runs changes. Write the full file each time.
+- Find the path once. Run `git rev-parse --path-format=absolute --git-common-dir`, and put `.ticket-loop-status` in the parent folder of its output. A linked worktree then uses the main checkout's file.
+- Write the file with the Write tool at each step change. Also write it when what you run now changes.
+- If the file exists, Read it before your first write. The Write tool refuses an existing file that you did not Read.
+- Write the full file each time.
 - Write one line, with these fields in this order, joined by ` · `:
   `#<ticket> · <step> · <what runs now> · since <HH:MM> · <shipped>/<total> shipped · <compact roles>`
 - Use one of these steps: `frontier`, `research`, `implement`, `decision`, `test queue`, `review`, `fixes`, `ship`, `hand-back`.
 - Give the local start time of this step as `HH:MM` (`date +%H:%M`).
 - Count the shipped and total tickets as the launcher's Tickets bar counts them, from your brief and the tracker.
-- Write the compact roles in the roles line order. Write each as `<Model>/<effort>`, with `medium` as `med`. Write a `usual` role as the model only, but keep `/usual` for the researcher. Add ` opt-in` after the researcher.
-- Write the `hand-back` step as your last write before each hand-back. Before you choose a ticket, write `#-` as the ticket, with all the other fields.
+- Write the compact roles in the roles line order.
+- Write each role as `<Model>/<effort>`, with `medium` as `med`.
+- Write a `usual` role as the model only. For the researcher, keep `/usual`.
+- Add ` opt-in` after the researcher.
+- Write the `hand-back` step as your last write before each hand-back.
+- After a resume, write the current step again, with a new `since` time.
+- Before you choose a ticket, write `#-` as the ticket, with all the other fields.
 
 An example: `#121 · test queue · running the browser suite · since 14:02 · 0/1 shipped · Opus/med · Haiku/usual opt-in · Opus/low · Sonnet · Opus/high`.
 
