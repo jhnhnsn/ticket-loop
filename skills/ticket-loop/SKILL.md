@@ -97,16 +97,18 @@ Read them before you write anything for the moment they show, and print them:
    - Without AskUserQuestion (a headless run), or if a blockers read fails, ask nothing and answer nothing: the coordinator reads the blockers itself, and step 1 of its definition covers a headless run.
 
    Then count the run for step 2's preview:
-   - **Ready count:** its ready tickets (the open ready-for-agent tickets under the parent, blocked or not, since blockers ship as the run goes; or the named tickets that are open and ready-for-agent; this is the run's size, not the parallel set), then the coordinators they take: the count divided by the ticket budget, rounded up, at least 1 (`M1: 7 ready, about 2 coordinators.`; `#82: 1 ready, about 1 coordinator.`). The ticket budget is the config's Ticket budget; a config without one uses 4, without asking.
+   - **Ready count:** its ready tickets (the open ready-for-agent tickets under the parent, blocked or not, since blockers ship as the run goes; or the named tickets that are open and ready-for-agent; this is the run's size, not the parallel set), then the coordinators they take: the count divided by the ticket budget, rounded up, at least 1. The line opens with the run name exactly as this step gives it: `M1: 7 ready, about 2 coordinators.` for a milestone named `M1`, `#120: 7 ready, about 2 coordinators.` for issue parent #120, `#82: 1 ready, about 1 coordinator.` for a named ticket. The ticket budget is the config's Ticket budget; a config without one uses 4, without asking.
    - **Progress:** the two progress bars (see Progress above).
    - **Roles:** the roles line (see Roles above).
+
+   The run name is the milestone's own name, or the issue numbers: `M1` for a milestone named `M1`, `#120` for an issue parent, `#82 #84` for named tickets. `M1` is the name of a milestone, not a prefix, so never write `M120` for issue #120.
 
    Done when you can name the run (`M1`, `#120`, `#82 #84`), any offer question is answered and you have the preview's lines: the ready count, the two bars and the roles line.
 
 2. **Dispatch the coordinator.** Use the Agent tool with `subagent_type` `ticket-loop:coordinator`, in the background, on the coordinator's model, passed as an alias (`opus`, `sonnet`, `haiku`, `fable`), and with the coordinator's effort as the Agent tool's `effort` parameter, both as the roles line gives them (an effort of `usual`: leave `effort` out). Label it (the Agent tool's `description`) `ticket-loop: <what it runs> coordinator <n>`: the run as step 1 named it, and `<n>` counting this run's coordinators from 1 (`ticket-loop: M1 coordinator 1`, `ticket-loop: #82 #84 coordinator 1`). The `ticket-loop:` prefix sets it apart from the per-ticket subagents it dispatches. Its brief names the run (the parent, or the tickets in order), gives the ticket budget, the roles line, the concurrency mode and limit (`Concurrency: suggest and ask, at most 2.`) and the answered sets (`Answered sets: #82 #84 accepted; #85 #86 declined.`, or `none`), and points at the loop config. If the user answered **keep going today** to the cap question earlier in this run, and today's local date (`date +%F`) is the date recorded with it, the brief says so, with that date, so the coordinator skips the cap check that day and doesn't ask again (step 6).
 
    Once the call returns, tell the user the coordinator is running, in a message that opens with the run's **preview**, these lines in this order:
-   - step 1's ready count;
+   - step 1's ready count, with the run name exactly as step 1 gives it;
    - step 1's two progress bars, Tickets then Usage;
    - the roles line.
 
@@ -116,6 +118,8 @@ Read them before you write anything for the moment they show, and print them:
    Usage    [████░░░░░░] 6.1% of the week today, cap 14.3%
    Coordinator: Opus, medium · Researcher: Haiku, usual (opt-in) · Implementer: Opus, low · Standards reviewer: Sonnet, usual · Spec reviewer: Opus, high
    ```
+
+   This example runs a milestone named `M1`. For issue parent #120, the first line is `#120: 7 ready, about 2 coordinators.`, with no `M`.
 
    Then, in a line, say that the coordinator is running, that the user can watch it (and its test queue) in the agent view, and that the main thread is theirs meanwhile. The user, in a headless run too, sees only what you write as text, so write the preview out every time: lines worked out in your thinking aren't shown. End your turn: its hand-back wakes you.
 
