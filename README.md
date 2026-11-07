@@ -160,11 +160,14 @@ nesting limit.
    `research` label; add it to tickets in unfamiliar code, ones that lean on a reference, or
    fixes across several files. An unlabelled ticket gets no research and no note, and its report
    says `research: not requested`. On a labelled ticket, first a cheap, read-only
-   **researcher** subagent (Haiku by default) maps the ticket in a **research note** of at most
-   300 words: the files and functions it touches as `path:line`, the patterns and earlier commits to follow, the existing seams,
-   tests and checks command, and any open question or ticket–reference conflict, flagged but not
-   decided. The coordinator posts it on the ticket as a `Research note (#82 research)` comment.
-   It edits, commits and files nothing; if it fails, the implementer goes ahead without it and
+   **researcher** subagent (Haiku by default) maps the ticket in a **research note** of about
+   200 words, 300 at most, in order of value: the files and functions it touches as `path:line`,
+   any open question or ticket–reference conflict, flagged but not decided, the patterns and
+   earlier commits to follow, and the existing seams, tests and checks command. The coordinator
+   posts it on the ticket as a `Research note (#82 research)` comment; a note over 300 words it
+   trims to fit first, keeping every part, pointer and flagged question, and marks it
+   `(trimmed from <n> words)`. It edits, commits and files nothing; if it fails or gives no
+   `path:line` pointers, the implementer goes ahead without it and
    the ticket's report says "research skipped". Then a fresh implementer subagent, starting from
    the ticket's research notes, builds it test-first at the seams the ticket names, runs the
    checks, commits locally (staging only its own files), and reports "ready to test" with a
