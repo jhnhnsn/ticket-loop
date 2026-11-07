@@ -4,6 +4,7 @@ What changes for you, the person running the loop, newest first.
 
 ## Unreleased
 
+- The plugin now has an MIT licence: a `LICENSE` file at the root and a `license` field in `plugin.json`. The plugin directory no longer refuses a submission for a missing licence. ([#8](https://github.com/jhnhnsn/ticket-loop/issues/8))
 - A named run no longer ships a ticket ahead of its blocker. The coordinator now reads the blockers of each named ticket from the tracker before it chooses the next one, also after a handover. If it can't read them, it stops, dispatches nothing, and tells you which ticket and why. ([#11](https://github.com/jhnhnsn/ticket-loop/issues/11))
 
 ## 1.17.0
