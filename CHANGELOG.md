@@ -2,6 +2,10 @@
 
 What changes for you, the person running the loop, newest first.
 
+## Unreleased
+
+- You can now see what a running coordinator does. The coordinator writes its ticket, step, what runs now and the start time to `.ticket-loop-status` at the repo root, and git ignores the file. When Claude Code says that the coordinator "is waiting on its own background work", the launcher reads the file and tells you the ticket, its step, what runs and for how long, with the Tickets bar. It writes a short "Still …" line if nothing changed, and it doesn't guess. A new status line script shows the ticket, step, Tickets and Usage bars and compact roles under the input box. It makes no GitHub call. With no run, it shows only the Usage bar. Setup asks before it adds the script to your settings, and it keeps your own status line. Older configs get the offer one time. ([#37](https://github.com/jhnhnsn/ticket-loop/issues/37))
+
 ## 1.16.0
 
 Agents can write in ASD-STE100 Simplified Technical English, parallel builds no longer strand the coordinator in a worktree, and long research notes are trimmed instead of dropped. Published on its own, between milestones.
