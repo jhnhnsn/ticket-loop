@@ -24,11 +24,13 @@ This project's own terms. With a `## Writing` section of `ASD-STE100`, they are 
 - **sub-issue:** a ticket attached to a parent issue.
 - **blocker:** an open ticket that another ticket waits on.
 - **frontier:** the open, ready tickets whose blockers are all closed.
-- **label:** a tag on a ticket, or the name the Agent tool shows for a subagent.
+- **label:** a tag on a ticket.
+- **agent label:** the name the Agent tool shows for a subagent, such as `#85 spec review`.
 - **decision:** a choice that belongs to the user, asked as a question.
 - **hand-back:** the message a coordinator gives the launcher when it stops its turn of work.
 - **brief:** the prompt an agent gives a subagent it starts.
-- **report:** what a subagent returns, or the few lines a coordinator writes per shipped ticket.
+- **report:** what a subagent returns.
+- **ticket report:** the few lines a coordinator writes per shipped ticket.
 - **research note:** the researcher's short map of a ticket, posted as a ticket comment.
 - **test plan:** the implementer's step-by-step instructions to test its ticket, with expected results.
 - **test queue:** the tests the coordinator runs itself, one ticket at a time.
@@ -72,7 +74,9 @@ This project's own terms. With a `## Writing` section of `ASD-STE100`, they are 
 - **tokencount:** the plugin that reports plan usage.
 - **gh:** the GitHub command-line tool.
 - **Claude Code:** the CLI that runs the loop.
-- **Opus, Sonnet, Haiku:** Claude models a role can run on.
+- **Opus:** a Claude model a role can run on.
+- **Sonnet:** a Claude model a role can run on.
+- **Haiku:** a Claude model a role can run on.
 - **Agent tool:** the tool that starts a subagent.
 - **SendMessage:** the tool that sends a message to a running or finished subagent.
 - **AskUserQuestion:** the tool that asks the user a question with options.
@@ -100,7 +104,7 @@ This project's own terms. With a `## Writing` section of `ASD-STE100`, they are 
 - **ship:** push a ticket's commits and close the ticket.
 - **publish:** release a new plugin version.
 - **triage:** sort a new ticket and give it a label.
-- **label:** put a label on a ticket or a subagent.
+- **label:** put a label on a ticket, or an agent label on a subagent.
 - **close:** mark an issue as done.
 - **file:** create a ticket in the tracker.
 - **review:** check a commit against standards or the spec.
