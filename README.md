@@ -84,12 +84,13 @@ yours, and stops only when it needs you and at the end of each milestone.
    `not applicable (no plan usage to read)`, and if tokencount can't tell,
    `can't read today's usage`, which hands back the same way.
 
-   Each coordinator ships at most the config's **ticket budget**, or fewer if a ticket ran
-   heavy, then hands back, and the main thread starts a fresh one
-   (`ticket-loop: M1 coordinator 2`) without asking, so no coordinator's context grows too
-   large. At each hand-back (a decision for you, a parallel offer, a handover, or a stop) the main thread shows
-   the report for each ticket shipped since the last, in a few lines: what shipped, the
-   decisions you answered and any taken on your behalf, tickets filed, what's next. Under the
+   Each coordinator ships the config's **ticket budget**, or fewer if a ticket ran heavy, or
+   more if a parallel build in hand must finish. It then hands back, and the main thread starts
+   a fresh one (`ticket-loop: M1 coordinator 2`) without asking, so no coordinator's context
+   grows too large. At each hand-back (a decision for you, a parallel offer, a handover, or a
+   stop) the main thread shows the report for each ticket shipped since the last, in a few
+   lines: what shipped, the decisions you answered and any taken on your behalf, tickets filed,
+   what's next. Under the
    reports come the Tickets and Usage bars again, read fresh from the tracker and tokencount,
    so you see the run's progress partway through. For a decision they come after you answer,
    in the message saying your answer is recorded on the ticket and the coordinator resumed
@@ -153,9 +154,9 @@ question carrying its drafted answer so "yes" accepts it:
 | Stops | anything beyond the built-in stops |
 | Models | the model and effort for the coordinator, the researcher (opt-in per ticket with the `research` label; Haiku, usual effort drafted), the implementer, the Standards reviewer and the Spec reviewer |
 | Commits | message style, closing keyword, attribution lines |
-| Concurrency | one of three modes: one at a time, parallel worktrees (up to a limit, no prompt), or suggest and ask (asks you each time, up to a limit); the limit defaults to 2 |
+| Concurrency | one of three modes: one at a time, parallel worktrees (up to a limit, no prompt), or suggest and ask (asks you once for each new set, up to a limit); the limit defaults to 2 |
 | Daily cap | the share of your plan's weekly usage one day may take (one day's share, 14.3%, by default), and whether it's rolling or per day (rolling if its text starts with `Rolling:`, otherwise per day) |
-| Ticket budget | the most tickets one coordinator ships before a fresh one takes over (4 by default) |
+| Ticket budget | the tickets one coordinator ships before a fresh one takes over (4 by default); a parallel build in hand finishes first |
 | Writing | the standard the agents write in: plain English, no standard, by default, or `ASD-STE100` (see [Writing](#writing)), with an optional path to your own copy of its dictionary |
 
 The answers go to **`docs/agents/ticket-loop.md`**, the loop config, with a pointer line in
@@ -334,17 +335,17 @@ each, in a root `GLOSSARY.md`, as [this repo's](GLOSSARY.md) does.
   can break a test. For code investigations during a run, use a worktree (`claude --worktree`,
   or `git worktree add`).
 - **Stopping:** stop the coordinator in the agent list to stop the loop.
-- **Concurrency modes:** the config's Concurrency text starts with its mode.
+- **Concurrency modes:** the config's Concurrency text is one of these three forms.
   - `One at a time.` builds one ticket, then the next.
   - `Parallel worktrees: at most 2 at once.` builds independent ready tickets side by side, with
     no prompt.
   - `Suggest and ask: at most 2 at once.` names the independent ready tickets and asks you. Accept
-    builds them side by side in worktrees; decline builds the first only and carries on one at
-    a time. It never asks about the same set twice in a run. One ready ticket, or tickets
-    blocked on each other, asks nothing. A headless run can't ask, so it takes decline, and its
-    report says so.
+    builds them side by side in worktrees. Decline covers that set and builds its first ticket
+    only. A new set, such as the tickets left after that build, asks once; the same set never
+    asks twice in a run. One ready ticket, or tickets blocked on each other, asks nothing. A
+    headless run can't ask, so it takes decline, and its report says so.
 
-  Tests run one at a time in every mode. An older config keeps working: text that offers
+  Tests run one at a time in every mode. An older config keeps working: other text that offers
   parallel worktrees is suggest and ask, and anything else is one at a time.
 - **One running app:** tickets that share one app session, simulator or game engine go one at a
   time; parallel worktrees only pay off when nothing they test is shared. In a parallel build,

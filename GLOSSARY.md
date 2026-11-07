@@ -28,9 +28,10 @@ This project's own terms. With a `## Writing` section of `ASD-STE100`, they are 
 - **agent label:** the name the Agent tool shows for a subagent, such as `#85 spec review`.
 - **decision:** a choice that belongs to the user, asked as a question.
 - **hand-back:** the message a coordinator gives the launcher when it stops its turn of work.
-- **parallel set:** the independent ready tickets, up to the config's limit, that the loop can build side by side.
-- **parallel offer:** the launcher's question that names a parallel set, and the hand-back that asks for it.
-- **answered sets:** the parallel sets that the user accepted or declined in a run, listed in each brief.
+- **parallel set:** the independent ready tickets, up to the concurrency limit, that the loop can build side by side.
+- **parallel offer:** the hand-back that gives the launcher a new parallel set to ask about.
+- **offer question:** the launcher's question to the user to accept or decline a parallel set.
+- **answered set:** a parallel set that the user accepted or declined in a run; each brief lists them.
 - **brief:** the prompt an agent gives a subagent it starts.
 - **report:** what a subagent returns.
 - **ticket report:** the few lines a coordinator writes per shipped ticket.
@@ -46,7 +47,9 @@ This project's own terms. With a `## Writing` section of `ASD-STE100`, they are 
 
 ### Limits
 
-- **ticket budget:** the most tickets one coordinator ships before a fresh one takes over.
+- **ticket budget:** the tickets one coordinator ships before a fresh one takes over; a parallel build in hand finishes first.
+- **concurrency mode:** how the loop builds ready tickets: one at a time, parallel worktrees, or suggest and ask.
+- **concurrency limit:** the most tickets the loop builds at once.
 - **daily cap:** the share of the plan's weekly usage that one day can use.
 - **allowance:** a rolling cap's limit: the daily share times the day of the usage week.
 - **cap question:** the launcher's question to the user when the daily cap is reached.
