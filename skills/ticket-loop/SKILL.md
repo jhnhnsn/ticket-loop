@@ -70,6 +70,8 @@ With a rolling cap, the Usage line reads `Usage    [█████░░░░�
 
   The labels are padded so both lines' second columns line up: `Tickets` then two spaces, `Usage` then four.
 
+  Work out the cells without writing the working as text, at any moment that shows the bars, before or after a dispatch. The user sees only the finished bar lines.
+
 Read them before you write anything for the moment they show, and print them:
 
 - at the start of a run, in step 2's preview, after the coordinator's dispatch;
