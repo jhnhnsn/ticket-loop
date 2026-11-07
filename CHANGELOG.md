@@ -4,6 +4,7 @@ What changes for you, the person running the loop, newest first.
 
 ## Unreleased
 
+- The coordinator now checks the daily cap before each dispatch and before each ship, because each step names the check. Ship has the check as its own first sub-step, so a run can't push on an old reading. ([#38](https://github.com/jhnhnsn/ticket-loop/issues/38))
 - At a handover, the launcher now starts the fresh coordinator before it reads any ticket, and it doesn't judge the next ticket. A decision on that ticket comes from the fresh coordinator, as a decision needed hand-back. ([#21](https://github.com/jhnhnsn/ticket-loop/issues/21))
 
 ## 1.18.0
