@@ -2,7 +2,9 @@
 
 What changes for you, the person running the loop, newest first.
 
-## Unreleased
+## 1.20.0
+
+The launcher reads less and says less: no ticket bodies before the coordinator starts, and no bar arithmetic. Headless stops give advice that fits an unreadable cap, and a headless run leaves the status line offer for later. Published on its own, between milestones.
 
 - To resolve a run, count it and draw the Tickets bar, the launcher now reads only the state and labels of each ticket, and no longer reads ticket bodies before the coordinator starts. ([#42](https://github.com/jhnhnsn/ticket-loop/issues/42))
 - A headless run now skips the one-time status line offer and changes nothing for it, and the next interactive run asks. If the launcher mentions the skip, it gives the headless session as the reason. ([#41](https://github.com/jhnhnsn/ticket-loop/issues/41))
