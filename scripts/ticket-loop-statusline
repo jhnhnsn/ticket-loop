@@ -1,0 +1,196 @@
+#!/usr/bin/env python3
+"""ticket-loop status line for Claude Code's `statusLine` setting.
+
+Reads Claude Code's JSON on stdin, the coordinator's status file
+(`.git/ticket-loop-status`), the loop config's Daily cap section and a
+tokencount `--json` report, and prints one line. Makes no GitHub call.
+
+Usage in settings: {"type": "command", "command": "python3 <this file>", "refreshInterval": 5}
+To keep an existing status line: python3 <this file> --with '<their command>'
+(their output comes first, then this line).
+
+Test hooks (environment):
+  TICKET_LOOP_USAGE_JSON  path to a tokencount --json report to use instead of tokencount
+  TICKET_LOOP_TOKENCOUNT  path to the tokencount script
+  TICKET_LOOP_NOW         ISO time to use as now
+"""
+import glob
+import json
+import os
+import re
+import subprocess
+import sys
+import tempfile
+import time
+from datetime import datetime, timedelta, timezone
+
+SEP = " · "
+STALE_SECONDS = 12 * 3600
+USAGE_CACHE_SECONDS = 60
+STATUS_RE = re.compile(r"^(\d+)/(\d+) shipped$")
+
+
+def parse_status(text):
+    """One line: ticket · step · now · since HH:MM · S/T shipped · five roles."""
+    if not text:
+        return None
+    parts = text.strip().split(SEP)
+    if len(parts) < 5 or not parts[3].startswith("since "):
+        return None
+    m = STATUS_RE.match(parts[4])
+    if not m:
+        return None
+    return {"ticket": parts[0], "step": parts[1], "now": parts[2],
+            "since": parts[3][len("since "):], "shipped": int(m.group(1)),
+            "total": int(m.group(2)), "roles": parts[5:]}
+
+
+def bar(use, limit):
+    filled = 0 if limit <= 0 else int(10 * use / limit + 0.5)
+    filled = max(0, min(10, filled))
+    return "[" + "█" * filled + "░" * (10 - filled) + "]"
+
+
+def cap_text(config):
+    m = re.search(r"^## Daily cap\s*\n(.*?)(?=^## |\Z)", config or "", re.S | re.M)
+    return m.group(1).strip() if m else None
+
+
+def _share(cap):
+    m = re.search(r"([\d.]+)%", cap)
+    return float(m.group(1)) if m else 100 / 7
+
+
+def usage_part(report, cap, now):
+    if not report or report.get("usage_source") == "unavailable":
+        return None
+    if cap and cap.lower().startswith("not applicable"):
+        return None
+    week = report.get("week") or {}
+    if cap is None:
+        use = week.get("percent_used")
+        return None if use is None else "Usage %s %.1f%% week" % (bar(use, 100), use)
+    share = _share(cap)
+    if cap.startswith("Rolling:"):
+        use, resets = week.get("percent_used"), week.get("resets_at")
+        if use is None or not resets:
+            return None
+        start = datetime.fromisoformat(resets) - timedelta(days=7)
+        day = max(1, min(7, int((now - start).total_seconds() // 86400) + 1))
+        allowance = min(100.0, share * day)
+        return "Usage %s %.1f%%/%.1f%% d%d" % (bar(use, allowance), use, allowance, day)
+    use = (report.get("today") or {}).get("percent_of_week")
+    if use is None:
+        return None
+    return "Usage %s %.1f%%/%.1f%% today" % (bar(use, share), use, share)
+
+
+def render(status_text, status_mtime, now, report, cap):
+    """The one line. No run going: no file, a bad line, a hand-back, or older than 12 hours."""
+    parts = []
+    s = parse_status(status_text)
+    run = (s is not None and s["step"] != "hand-back" and status_mtime is not None
+           and now.timestamp() - status_mtime < STALE_SECONDS)
+    if run:
+        parts.append("%s %s" % (s["ticket"], s["step"]))
+        parts.append("Tickets %s %d/%d" % (bar(s["shipped"], s["total"]), s["shipped"], s["total"]))
+    u = usage_part(report, cap, now)
+    if u:
+        parts.append(u)
+    if run:
+        parts.extend(s["roles"])
+    return SEP.join(parts)
+
+
+def _find_tokencount():
+    env = os.environ.get("TICKET_LOOP_TOKENCOUNT")
+    if env:
+        return env
+    found = glob.glob(os.path.expanduser("~/.claude/plugins/cache/*/tokencount/*/tokencount"))
+
+    def version(p):
+        v = os.path.basename(os.path.dirname(p))
+        return [int(x) if x.isdigit() else 0 for x in v.split(".")]
+    return max(found, key=version) if found else None
+
+
+def read_usage():
+    env = os.environ.get("TICKET_LOOP_USAGE_JSON")
+    if env:
+        try:
+            with open(env) as f:
+                return json.load(f)
+        except (OSError, ValueError):
+            return None
+    cache = os.path.join(tempfile.gettempdir(), "ticket-loop-statusline-usage.json")
+    try:
+        if time.time() - os.path.getmtime(cache) < USAGE_CACHE_SECONDS:
+            with open(cache) as f:
+                return json.load(f)
+    except (OSError, ValueError):
+        pass
+    tc = _find_tokencount()
+    if not tc:
+        return None
+    try:
+        out = subprocess.run([sys.executable, tc, "--json"], capture_output=True,
+                             text=True, timeout=20).stdout
+        report = json.loads(out)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+    try:
+        with open(cache, "w") as f:
+            json.dump(report, f)
+    except OSError:
+        pass
+    return report
+
+
+def _git_dir(cwd):
+    try:
+        out = subprocess.run(["git", "-C", cwd, "rev-parse", "--path-format=absolute",
+                              "--git-common-dir", "--show-toplevel"],
+                             capture_output=True, text=True, timeout=5).stdout.split("\n")
+        return out[0], out[1]
+    except (OSError, IndexError, subprocess.SubprocessError):
+        return None, None
+
+
+def _read(path):
+    try:
+        with open(path) as f:
+            return f.read(), os.path.getmtime(path)
+    except OSError:
+        return None, None
+
+
+def main(argv):
+    stdin = sys.stdin.read()
+    try:
+        data = json.loads(stdin or "{}")
+    except ValueError:
+        data = {}
+    ws = data.get("workspace") or {}
+    cwd = ws.get("project_dir") or ws.get("current_dir") or data.get("cwd") or os.getcwd()
+    now_env = os.environ.get("TICKET_LOOP_NOW")
+    now = datetime.fromisoformat(now_env) if now_env else datetime.now(timezone.utc)
+
+    git_dir, top = _git_dir(cwd)
+    status, mtime = _read(os.path.join(git_dir, "ticket-loop-status")) if git_dir else (None, None)
+    config, _ = _read(os.path.join(top, "docs/agents/ticket-loop.md")) if top else (None, None)
+    line = render(status, mtime, now, read_usage(), cap_text(config))
+
+    if len(argv) >= 2 and argv[0] == "--with":
+        try:
+            theirs = subprocess.run(argv[1], shell=True, input=stdin, capture_output=True,
+                                    text=True, timeout=20).stdout.rstrip("\n")
+        except (OSError, subprocess.SubprocessError):
+            theirs = ""
+        if theirs:
+            print(theirs)
+    if line:
+        print(line)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

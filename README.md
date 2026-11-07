@@ -99,6 +99,32 @@ yours, and stops only when it needs you and at the end of each milestone.
    the main thread at any time. Push and publish commands ask permission in your main session,
    naming the agent, unless your settings allow them; allow them to keep the loop unattended.
 
+   **While a run goes on**, the coordinator writes its state to `.git/ticket-loop-status`, one
+   line at each step change. Git ignores the file. When Claude Code says that a coordinator
+   "is waiting on its own background work", the main thread reads the file and writes one line:
+
+   ```
+   #121 is in the test queue, running the browser suite (4 min). Tickets [░░░░░░░░░░] 0 of 1 shipped.
+   ```
+
+   With no change since its last line, it writes `Still running the browser suite on #121 (6 min).`
+   With no status file, it says that it has no status yet.
+
+   **The status line.** The plugin has a status line script, `scripts/ticket-loop-statusline`,
+   for Claude Code's `statusLine` setting. Setup offers to add it, shows you the change, and
+   keeps your own status line in front of it. The line stays under the input box, and it
+   refreshes every 5 seconds:
+
+   ```
+   #121 test queue · Tickets [░░░░░░░░░░] 0/1 · Usage [████████░░] 43.0%/57.2% d4 · Opus/med · Haiku/usual opt-in · Opus/low · Sonnet · Opus/high
+   ```
+
+   With no run, it shows only the Usage bar, or nothing if tokencount can't tell. A run is
+   over when the file's last step is `hand-back`, or the file is 12 hours old. The script makes
+   no GitHub call: the ticket counts come from the file. To add it by hand, set
+   `"statusLine": {"type": "command", "command": "python3 <plugin root>/scripts/ticket-loop-statusline", "refreshInterval": 5}`.
+   To keep a status line you have, add `--with '<your command>'` after the script.
+
 ## First run
 
 With no loop config in the repo, the loop runs setup first. It reads what the repo already says

@@ -90,7 +90,15 @@ Read them before you write anything for the moment they show, and print them:
 
    Then, in a line, say that the coordinator is running, that the user can watch it (and its test queue) in the agent view, and that the main thread is theirs meanwhile. The user, in a headless run too, sees only what you write as text, so write the preview out every time: lines worked out in your thinking aren't shown. End your turn: its hand-back wakes you.
 
-3. **While it runs**, the main thread is the user's: answer what they ask as usual. The coordinator's tests and commits see the working tree, so code edits during a run belong in a worktree: make none yourself for the loop, and if the user asks for some, suggest a worktree. Asked "how's the agent doing?", answer from the coordinator's latest state without disturbing it: the tail of its transcript (the output file its dispatch named), the tracker and `git log`. Don't send it a message for this.
+3. **While it runs**, the main thread is the user's: answer what they ask as usual. The coordinator's tests and commits see the working tree, so code edits during a run belong in a worktree: make none yourself for the loop, and if the user asks for some, suggest a worktree. Asked "how's the agent doing?", answer from the coordinator's latest state without disturbing it. Read the status file first (see Status file below), then the tail of its transcript (the output file its dispatch named), the tracker and `git log`. Don't send it a message for this.
+
+   **Status file.** The coordinator writes its state to `.git/ticket-loop-status` in the repo, as one line: `#121 · test queue · running the browser suite · since 14:02 · 0/1 shipped · <compact roles>` ([`agents/coordinator.md`](../../agents/coordinator.md), Status file). Read it with the Read tool.
+
+   **Background notices.** Claude Code can tell you that a coordinator "is waiting on its own background work". For each notice, read the status file and write one line. Give the ticket, its step, what runs now, and the minutes since the `since` time. Add the Tickets bar from the file's counts:
+   `#121 is in the test queue, running the browser suite (4 min). Tickets [░░░░░░░░░░] 0 of 1 shipped.`
+   If the step and what runs now are the same as in your last line, write a short line: `Still running the browser suite on #121 (6 min).` If there is no status file, or its last change is older than the coordinator's dispatch, write that you have no status yet. Don't guess.
+
+   **Status line.** The plugin has a status line script, `scripts/ticket-loop-statusline`, for Claude Code's `statusLine` setting. Setup offers to add it ([`SETUP.md`](SETUP.md)). It shows the status file and the Usage bar under the input box, and does not scroll. It makes no GitHub call.
 
 4. **Show the hand-back.** Each ticket's report it carries (what shipped, how many research passes ran, trimmed ones marked (or research skipped, or research: not requested), decisions they answered and any taken on their behalf, tickets filed), with the two progress bars under the reports, read fresh now (see Progress above). Write them out as text now, or hold them for a later message, as Progress says for this kind of hand-back. Keep none of the coordinator's working detail.
 

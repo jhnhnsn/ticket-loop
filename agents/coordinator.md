@@ -64,6 +64,21 @@ Steps 2 and 4 dispatch subagents in the mode this section picks, by checking you
 
 Verified on Claude Code 2.1.316; see [ADR-0001](../docs/adr/0001-coordinator-dispatch-by-session.md).
 
+## Status file
+
+The status file tells the launcher and the status line what you do now. It is `.git/ticket-loop-status` in the main checkout of the repo you run in. Git ignores it, so it never goes into a commit or the working tree.
+
+- Write it with the Write tool at each step change, and when the thing that runs changes. Write the full file each time.
+- Write one line, with these fields in this order, joined by ` · `:
+  `#<ticket> · <step> · <what runs now> · since <HH:MM> · <shipped>/<total> shipped · <compact roles>`
+- Use one of these steps: `frontier`, `research`, `implement`, `decision`, `test queue`, `review`, `fixes`, `ship`, `hand-back`.
+- Give the local start time of this step as `HH:MM` (`date +%H:%M`).
+- Count the shipped and total tickets as the launcher's Tickets bar counts them, from your brief and the tracker.
+- Write the compact roles in the roles line order. Write each as `<Model>/<effort>`, with `medium` as `med`. Write a `usual` role as the model only, but keep `/usual` for the researcher. Add ` opt-in` after the researcher.
+- Write the `hand-back` step as your last write before each hand-back. Before you choose a ticket, write `#-` as the ticket, with all the other fields.
+
+An example: `#121 · test queue · running the browser suite · since 14:02 · 0/1 shipped · Opus/med · Haiku/usual opt-in · Opus/low · Sonnet · Opus/high`.
+
 ## Steps
 
 1. **Frontier.** For a parent, list its open ready-for-agent tickets whose blockers are all closed, as the loop config's tracker says; the first in its order is next. For named tickets, the frontier is the ones not yet shipped, in the order given, except that a named ticket blocked by another named ticket waits for it; a named ticket that isn't ready-for-agent, or is blocked by an open ticket that wasn't named, is skipped with a word on why. State its number and title, then check the ticket budget (see Ticket budget). Done when a ticket is chosen, the budget is reached, or the frontier is empty (a stop condition).
@@ -119,7 +134,7 @@ A hand-back is one of:
 - **cap reached** (see Daily cap): the cap's mode, use and limit (per day: today's use and the cap; rolling: the week's use, the allowance and the day, as `week 20.0%, allowance 28.6% (day 2 of 7)`), or that it can't be read and why, the ticket in hand (number and title, or none) and where it stands, and what's committed locally. Nothing is dispatched or shipped after the check that tripped. The launcher resumes you with the user's answer.
 - a **stop condition** (which one, and what the user needs to know or do), then what's next.
 
-Whichever it is, add the report from step 6 of each ticket shipped since your last hand-back. That's all the launcher keeps, so leave out the working detail. **Dispatch** above says how to hand back in your session. A hand-back ends your turn of work. If the launcher resumes you with SendMessage, carry on from where you stopped: the run goes on until your next hand-back.
+Before you hand back, write the `hand-back` step to the status file (see Status file). Whichever it is, add the report from step 6 of each ticket shipped since your last hand-back. That's all the launcher keeps, so leave out the working detail. **Dispatch** above says how to hand back in your session. A hand-back ends your turn of work. If the launcher resumes you with SendMessage, carry on from where you stopped: the run goes on until your next hand-back.
 
 ## Ticket budget
 

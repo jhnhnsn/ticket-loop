@@ -29,6 +29,21 @@ Call the Skill tool with `mattpocock-skills:grilling`. The design tree's root qu
 
 Done when the grilling's frontier is empty and the user confirms the answers.
 
+## 2a. Offer the status line
+
+The plugin has a status line script, `scripts/ticket-loop-statusline`. It shows the ticket, step, Tickets and Usage bars and compact roles under the input box. With no run, it shows only the Usage bar. A plugin can't change user settings by itself, so ask the user first, with AskUserQuestion. Recommend yes.
+
+If the user says yes:
+
+1. Read the `statusLine` setting in `~/.claude/settings.json`.
+2. Use `<plugin root>/scripts/ticket-loop-statusline` as the script, with the plugin root of the installed plugin (the marketplace clone, `~/.claude/plugins/marketplaces/ticket-loop`, keeps the latest version).
+3. With no `statusLine`, propose `{"type": "command", "command": "python3 <script>", "refreshInterval": 5}`.
+4. With a `statusLine` of type `command`, keep the user's command. Propose `python3 <script> --with '<their command>'`. Their line comes first, then the loop's line. Keep their `padding`, and set `refreshInterval` to 5 if it is not set or is more than 5.
+5. Show the user the old value and the new value. Ask again before you write.
+6. Write only the `statusLine` key with the Edit tool, and change nothing else in the file.
+
+If the user says no, or the setting has a type other than `command`, change nothing. Tell the user how to add it later.
+
 ## 3. Write it
 
 Write `docs/agents/ticket-loop.md` with one short section per question above, in that order, each the confirmed answer in a few lines: commands in backticks, files as paths, no rationale beyond a clause. The Tickets section has a line `Read a ticket: <read command>.` In the Test queue section, list the test hooks the app has. Add a pointer line to CLAUDE.md's agent docs (`Ticket loop: see docs/agents/ticket-loop.md`). Commit both. To change the config later, edit the file; to redo it, delete it and run the loop again.
