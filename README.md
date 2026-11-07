@@ -244,6 +244,8 @@ for each ticket it worked.
   what's left for you (`ready-for-human` tickets, tickets filed for triage), and waits. It never
   starts the next milestone on its own.
 - The remaining tickets are all blocked or `ready-for-human`.
+- It can't read a named ticket's blockers: it dispatches nothing, and names the ticket and why the
+  read failed.
 - Something needs you in person: a click in a running app, a device check, credentials, a stuck
   tool.
 - A push, publish or check fails in a way a fix can't safely cover.
