@@ -76,7 +76,7 @@ Read them before you write anything for the moment they show, and print them:
 - at a **stop condition** hand-back, under its reports (step 4), and at a **decision needed** or **cap reached** one in a headless run, where it's a stop (steps 5 and 6);
 - at a **decision needed** or **cap reached** hand-back with AskUserQuestion, under its reports in step 5's "answer recorded" or step 6's "answer given" message, after the user answers and the coordinator is resumed. Read them before the question, but print nothing of them before it;
 - at a **parallel offer** hand-back, under its reports in step 9's "answer given" message, after the coordinator is resumed. Read them before any question, but print nothing of them before it;
-- at a **budget reached** hand-back, under its reports in step 7's "took over" message, after the fresh coordinator's dispatch. Read them after that dispatch too, since step 7 reads no ticket before it. A handover shows nothing else of the preview.
+- at a **budget reached** hand-back, under its reports in step 7's "took over" message, after the fresh coordinator's dispatch. A handover shows nothing else of the preview.
 
 ## Steps
 
@@ -141,7 +141,7 @@ Read them before you write anything for the moment they show, and print them:
 
    **Status line.** The plugin has a status line script, `scripts/ticket-loop-statusline`, for Claude Code's `statusLine` setting. Setup offers to add it ([`SETUP.md`](SETUP.md)). It shows the status file and the Usage progress bar under the input box, and does not scroll. It makes no GitHub call.
 
-4. **Show the hand-back.** Each ticket's report it carries (what shipped, how many research passes ran, trimmed ones marked (or research skipped, or research: not requested), decisions they answered and any taken on their behalf, tickets filed), any `took decline` line, with the two progress bars under the reports, read fresh now (see Progress above), or, at **budget reached**, after the dispatch (step 7). Write them out as text now, or hold them for a later message, as Progress says for this kind of hand-back. Keep none of the coordinator's working detail.
+4. **Show the hand-back.** Each ticket's report it carries (what shipped, how many research passes ran, trimmed ones marked (or research skipped, or research: not requested), decisions they answered and any taken on their behalf, tickets filed), any `took decline` line, with the two progress bars under the reports, read fresh at the moment Progress above gives. Write them out as text now, or hold them for a later message, as Progress says for this kind of hand-back. Keep none of the coordinator's working detail.
 
 5. **Relay a decision.** When the hand-back is **decision needed**, ask the user with AskUserQuestion: the ticket in the question, the options with the recommendation first (marked as recommended). Write nothing to the user before the question. Record their answer on the ticket as a comment, as the config's tracker says. Then resume the same coordinator with SendMessage, to the agent ID its dispatch returned, with the answer and a pointer to the comment. Don't dispatch a new coordinator for this. Once SendMessage returns, tell the user, in one message, in this order:
    - the hand-back's reports (step 4), if it carried any;
@@ -163,7 +163,7 @@ Read them before you write anything for the moment they show, and print them:
 
 7. **Hand over.** When the hand-back is **budget reached**, its next ticket shows the frontier still has a ready one: without asking, dispatch a fresh coordinator with step 2's Agent call, numbered one up (`ticket-loop: M1 coordinator 2`), with the same budget, roles line, concurrency mode and limit, all the answered sets so far, and the keep going today line exactly as step 2 gives it, and without the preview, which the first coordinator's message already gave. It rebuilds the frontier from the tracker. For named tickets, its brief names only those not yet shipped, in the original order, as the hand-backs' reports show them.
 
-   Before the dispatch, read no ticket, the next one included, and don't judge what the next ticket asks, whatever its title says. A decision on it belongs to the fresh coordinator, which hands it back as **decision needed** (step 5). Write nothing to the user before the dispatch. Once the call returns, read the progress bars, then tell the user, in place of step 2's message, in one message, in this order:
+   Before the dispatch, read no ticket, and don't judge what the next ticket asks. A decision on it belongs to the fresh coordinator, which hands it back as **decision needed** (step 5). Write nothing to the user before the dispatch. Once the call returns, read the progress bars, then tell the user, in place of step 2's message, in one message, in this order:
    - the hand-back's reports (step 4);
    - the two progress bars;
    - one line saying which coordinator took over, with any skipped tickets or ready-for-human notes the hand-back carried.

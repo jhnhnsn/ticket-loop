@@ -145,7 +145,7 @@ An example: `#121 · test queue · running the browser suite · since 14:02 · 0
 
 5. **Ship.** Add the ticket's entry to the changelog the config names, written as it says for its readers, commit it, push, then publish or deploy as the config says. Confirm the ticket closed. Done when all succeeded; a failure is a stop condition.
 
-6. **Report.** Write the ticket's report for your hand-back, in a few lines: what shipped, how many research passes ran, with trimmed ones marked (`1 research pass (trimmed)`) (or "research skipped", or `research: not requested` for a ticket without the `research` label), each decision the user answered (step 3) and any taken on their behalf, and tickets filed. With another ticket of a parallel build still unshipped, go on with that ticket (see Parallel builds). Otherwise, back to step 1, unless that was the last ticket named.
+6. **Report.** Write the ticket's report for your hand-back, in a few lines: what shipped, with the ticket's number and title, how many research passes ran, with trimmed ones marked (`1 research pass (trimmed)`) (or "research skipped", or `research: not requested` for a ticket without the `research` label), each decision the user answered (step 3) and any taken on their behalf, and tickets filed. With another ticket of a parallel build still unshipped, go on with that ticket (see Parallel builds). Otherwise, back to step 1, unless that was the last ticket named.
 
 ## Hand-back
 
