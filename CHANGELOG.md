@@ -2,7 +2,9 @@
 
 What changes for you, the person running the loop, newest first.
 
-## Unreleased
+## 1.16.0
+
+Agents can write in ASD-STE100 Simplified Technical English, parallel builds no longer strand the coordinator in a worktree, and long research notes are trimmed instead of dropped. Published on its own, between milestones.
 
 - Your loop config can ask the agents to write in ASD-STE100 Simplified Technical English, with a new `## Writing` section. Then the launcher, coordinator, researchers, implementers and reviewers keep their messages, briefs, reports and ticket comments short and plain: short sentences, one instruction each, active voice. Code, quoted text and commit messages stay as they are. Setup asks for it, with plain English as the default. A new `GLOSSARY.md` lists the project's own terms. If you give a path to your own copy of the standard, the Standards reviewer looks up doubtful words in its dictionary. The plugin links to the standard and never copies its text. ([#36](https://github.com/jhnhnsn/ticket-loop/issues/36))
 - Parallel builds no longer get the coordinator stuck in a worktree. It never messages a worktree implementer, not even with a decision's answer. Once one reports, the coordinator cherry-picks its commits onto main, checks they all arrived, and removes the worktree and its branch. Review fixes, test failures and decisions then go to a fresh implementer on main, and each push carries only the shipping ticket's commits, so no ticket closes before it ships. ([#34](https://github.com/jhnhnsn/ticket-loop/issues/34))
