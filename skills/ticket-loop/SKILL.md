@@ -153,9 +153,13 @@ Read them before you write anything for the moment they show, and print them:
 
    **End the status.** When the run ends, write the `hand-back` step to the status file. Do this at each stop (steps 5, 6 and 8), and when the coordinator stops or fails without a hand-back. The user can stop it in the agent list, for example. Read the file first, then Write the same line with the step changed to `hand-back`.
 
-   **Background notices.** Claude Code can tell you that a coordinator "is waiting on its own background work". For each notice, read the status file and write one line. Give the ticket, its step, what runs now, and the minutes since the `since` time. Add the Tickets progress bar from the file's counts:
-   `#121 is in the test queue, running the browser suite (4 min). Tickets [░░░░░░░░░░] 0 of 1 shipped.`
-   If the step and what runs now are the same as in your last line, write a short line: `Still running the browser suite on #121 (6 min).` If the No run rule is true, write that you have no status yet. Don't guess.
+   **Background notices.** Claude Code can tell you that a coordinator "is waiting on its own background work". Claude Code writes its own line for each notice. Your answer depends on the config's `## Status line` section:
+   - **The section says `Added.`** The status line shows the same state, and it does not scroll. Read nothing, write no text, and end your turn.
+   - **Any other value, or no section.** Read the status file. Write one line only when you wrote no line yet in this run, or when the step or what runs now is different from your last line. Give the ticket, its step, what runs now, and the minutes since the `since` time. Add the Tickets progress bar from the file's counts:
+     `#121 is in the test queue, running the browser suite (4 min). Tickets [░░░░░░░░░░] 0 of 1 shipped.`
+     With no change, write no text and end your turn. If the No run rule is true and you wrote no line yet, write once that you have no status yet. Don't guess.
+
+   A turn with no text at a notice is correct. When the user asks for progress, answer from the status file, the transcript, the tracker and `git log`, as above.
 
    **Status line.** The plugin has a status line script, `scripts/ticket-loop-statusline`, for Claude Code's `statusLine` setting. Setup offers to add it ([`SETUP.md`](SETUP.md)). It shows the status file and the Usage progress bar under the input box, and does not scroll. It makes no GitHub call.
 
