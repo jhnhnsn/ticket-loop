@@ -2,7 +2,9 @@
 
 What changes for you, the person running the loop, newest first.
 
-## Unreleased
+## 1.21.0
+
+With the status line added, background notices no longer add launcher lines to the chat. A headless run with no Daily cap section stops before it reads or changes anything, and the README's headless cap advice fits the cause. Published on its own, between milestones.
 
 - A headless run with no Daily cap section in the loop config now stops at once, before any tracker read, and dispatches, commits and writes nothing. It says why, and gives two ways on: run the loop interactively and answer the cap question, or add a Daily cap section by hand. ([#44](https://github.com/jhnhnsn/ticket-loop/issues/44))
 - With the status line added, the launcher now writes nothing when Claude Code says a coordinator is waiting on its background work. Without it, the launcher writes one line for the first notice and then only when the step or what runs now changes, and the `Still running …` line is gone. ([#45](https://github.com/jhnhnsn/ticket-loop/issues/45))
