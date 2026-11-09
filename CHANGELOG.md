@@ -4,6 +4,7 @@ What changes for you, the person running the loop, newest first.
 
 ## Unreleased
 
+- With the status line added, the launcher now writes nothing when Claude Code says a coordinator is waiting on its background work. Without it, the launcher writes one line for the first notice and then only when the step or what runs now changes, and the `Still running …` line is gone. ([#45](https://github.com/jhnhnsn/ticket-loop/issues/45))
 - The README now gives separate advice for the two headless cap stops: for a reached cap, raise the cap or wait; for a cap the loop can't read, make tokencount available, mark the cap not applicable, or run interactively. ([#43](https://github.com/jhnhnsn/ticket-loop/issues/43))
 
 ## 1.20.0
