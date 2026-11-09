@@ -102,11 +102,11 @@ yours, and stops only when it needs you and at the end of each milestone.
 
    **While a run goes on**, the coordinator writes its state to `.ticket-loop-status` at the
    root of the main checkout, one line at each step change. Setup adds the file to your
-   `.gitignore`, so it never goes into a commit. When Claude Code says that a coordinator
-   "is waiting on its own background work", the main thread writes nothing if the config's
-   `## Status line` section says `Added.`: the status line shows the same state. Without the
-   status line, the main thread reads the file. It writes one line for the first notice, and
-   again only when the step or what runs now changes:
+   `.gitignore`, so it never goes into a commit. Claude Code can say that a coordinator "is
+   waiting on its own background work". If the config's `## Status line` section says
+   `Added.`, the main thread writes nothing at this notice. The status line shows the same
+   state. Without the status line, the main thread reads the file. It writes one line for the
+   first notice. After that, it writes one only when the step or what runs now changes:
 
    ```
    #121 is in the test queue, running the browser suite (4 min). Tickets [░░░░░░░░░░] 0 of 1 shipped.
