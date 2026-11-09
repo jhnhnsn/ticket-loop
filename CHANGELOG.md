@@ -4,6 +4,7 @@ What changes for you, the person running the loop, newest first.
 
 ## Unreleased
 
+- A headless run with no Daily cap section in the loop config now stops at once, before any tracker read, and dispatches, commits and writes nothing. It says why, and gives two ways on: run the loop interactively and answer the cap question, or add a Daily cap section by hand. ([#44](https://github.com/jhnhnsn/ticket-loop/issues/44))
 - With the status line added, the launcher now writes nothing when Claude Code says a coordinator is waiting on its background work. Without it, the launcher writes one line for the first notice and then only when the step or what runs now changes, and the `Still running …` line is gone. ([#45](https://github.com/jhnhnsn/ticket-loop/issues/45))
 - The README now gives separate advice for the two headless cap stops: for a reached cap, raise the cap or wait; for a cap the loop can't read, make tokencount available, mark the cap not applicable, or run interactively. ([#43](https://github.com/jhnhnsn/ticket-loop/issues/43))
 
