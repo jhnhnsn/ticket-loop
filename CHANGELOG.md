@@ -2,6 +2,10 @@
 
 What changes for you, the person running the loop, newest first.
 
+## Unreleased
+
+- The README now gives separate advice for the two headless cap stops: for a reached cap, raise the cap or wait; for a cap the loop can't read, make tokencount available, mark the cap not applicable, or run interactively. ([#43](https://github.com/jhnhnsn/ticket-loop/issues/43))
+
 ## 1.20.0
 
 The launcher reads less and says less: no ticket bodies before the coordinator starts, and no bar arithmetic. Headless stops give advice that fits an unreadable cap, and a headless run leaves the status line offer for later. Published on its own, between milestones.
