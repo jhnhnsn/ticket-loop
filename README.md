@@ -261,13 +261,14 @@ for each ticket it worked.
   ticket or one more** (then it asks again), or **keep going today** (not asked again today,
   even by the next coordinator). In a headless run it can't ask, so it stops there. What you
   do next depends on the cause:
-  - **The cap is reached:** raise the cap in the loop config, or run the loop interactively, to
-    go on today. Otherwise run it once the limit grows: tomorrow for a per day cap, or for a
-    rolling one at the week's reset time each day, when the allowance grows by a day's share.
-  - **The cap can't be read:** the stop says why. Install or enable tokencount, if the stop says
-    that tokencount is missing, disabled or not available. Or mark the cap not applicable in the
-    loop config's Daily cap section, so the loop skips the cap. Or run the loop interactively and
-    answer the question. A higher cap or a wait doesn't help here.
+  - **The cap is reached:** to go on today, raise the cap in the loop config. You can also run
+    the loop interactively today. Otherwise, run it again once the limit grows. A per day cap
+    grows tomorrow. A rolling cap grows by a day's share each day, at the week's reset time.
+  - **The cap can't be read:** the stop says why. You have three ways on. If the stop says that
+    tokencount is missing, disabled or not available, install or enable it. You can mark the cap
+    not applicable in the loop config's Daily cap section, so the loop skips the cap. You can
+    also run the loop interactively and answer the question. A higher cap or a wait doesn't fix
+    this stop, because the loop still can't read your use.
 - Anything else your config lists.
 
 ## Models
