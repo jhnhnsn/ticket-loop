@@ -92,7 +92,11 @@ Read them before you write anything for the moment they show, and print them:
 
 ## Steps
 
-0. **Setup.** With no loop config in the repo, run setup first, as [`SETUP.md`](SETUP.md) says. It grills the user, writes the config, and proves the loop closes ([`CLOSED-LOOP.md`](CLOSED-LOOP.md)). Done when `docs/agents/ticket-loop.md` is committed and every leg is closed, or M0's tickets are filed (a stop: tell the user, and dispatch nothing). A loop config written before the daily cap existed has no Daily cap section: ask setup's Daily cap question alone, prove the Cap leg, and add the answer to the config, committed, before dispatching. In the same way, a loop config with no Status line section gets a one-time offer:
+0. **Setup.** With no loop config in the repo, run setup first, as [`SETUP.md`](SETUP.md) says. It grills the user, writes the config, and proves the loop closes ([`CLOSED-LOOP.md`](CLOSED-LOOP.md)). Done when `docs/agents/ticket-loop.md` is committed and every leg is closed, or M0's tickets are filed (a stop: tell the user, and dispatch nothing). A loop config written before the daily cap existed has no Daily cap section: ask setup's Daily cap question alone, prove the Cap leg, and add the answer to the config, committed, before dispatching.
+
+   Without AskUserQuestion (a headless run), a config with no Daily cap section is a stop. Do this check before the status line offer and before step 1, so the run reads no tickets. Dispatch nothing, write no Daily cap section, prove no Cap leg, and commit nothing. In one message, say that the config has no Daily cap section and that a headless run can't ask the question. Give the headless session as the reason, not any state of the repo. Then give the two ways on: run the loop interactively and answer the question, or add a `## Daily cap` section to the loop config by hand, in one of the forms [`SETUP.md`](SETUP.md) gives (per day, `Rolling:`, or not applicable).
+
+   In the same way, a loop config with no Status line section gets a one-time offer:
    - Ask setup's status line offer alone (SETUP.md step 3).
    - Add the `## Status line` section with the answer, as SETUP.md step 4 says.
    - If the repo's `.gitignore` does not list `.ticket-loop-status`, add it.
