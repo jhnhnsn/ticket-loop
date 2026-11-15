@@ -305,6 +305,83 @@ class Comparison(unittest.TestCase):
         self.assertNotIn("secret words", json.dumps(r))
 
 
+class NotMeasured(unittest.TestCase):
+    SHIPS = {"name": "ships", "holdout": False}
+    CAP = {"name": "cap-trip", "holdout": False, "config": {"Daily cap": "Rolling: 0.01%."}}
+
+    def test_a_real_cap_stop_in_a_scenario_that_does_not_set_the_cap_is_not_measured(self):
+        s = {"report": "cap reached: week 21.0%, allowance 14.3% (day 1 of 7)"}
+        why = rg.not_measured(self.SHIPS, s)
+        self.assertIn("cap", why)
+
+    def test_a_cap_stop_in_the_cap_scenario_is_its_measure(self):
+        s = {"report": "cap reached: week 21.0%, allowance 0.01%"}
+        self.assertIsNone(rg.not_measured(self.CAP, s))
+
+    def test_a_run_with_no_final_report_is_not_measured(self):
+        self.assertIn("no final report", rg.not_measured(self.SHIPS, {"report": None}))
+
+    def test_a_normal_report_is_measured(self):
+        self.assertIsNone(rg.not_measured(self.SHIPS, {"report": "Shipped #3."}))
+
+    def test_unmeasured_runs_make_the_comparison_inconclusive_not_a_pass(self):
+        def run(s, v):
+            return {"pass": False, "checks": [], "models": ["m"], "usage": 0.5,
+                    "not_measured": "the real Daily cap stopped the run"}
+        r = rg.run_comparison([self.SHIPS], 1, [], run, always(), {})
+        self.assertEqual(r["verdict"], "inconclusive")
+        self.assertIn("ships: not measured", r["reasons"][0])
+        self.assertEqual(r["scenarios"]["ships"]["not_measured"], {"baseline": 1, "candidate": 1})
+        self.assertEqual(r["scenarios"]["ships"]["candidate"], "0/0")
+
+    def test_a_fail_on_measured_runs_stays_a_fail(self):
+        n = {"i": 0}
+
+        def run(s, v):
+            n["i"] += 1
+            if s["name"] == "claimed":
+                return {"pass": False, "checks": [], "models": ["m"], "not_measured": "x"}
+            return {"pass": v == "baseline", "checks": [], "models": ["m"]}
+        r = rg.run_comparison(SCEN[:2], 2, [], run, always(), {})
+        self.assertEqual(r["verdict"], "fail")
+
+
+class SuiteCap(unittest.TestCase):
+    def test_a_scenario_with_no_cap_of_its_own_gets_the_loop_cap(self):
+        cfg = rg.scenario_config({"config": {"Ticket budget": "1"}}, "Rolling: 14.3% a day.")
+        self.assertEqual(cfg, {"Daily cap": "Rolling: 14.3% a day.", "Ticket budget": "1"})
+
+    def test_the_cap_scenario_keeps_its_own_cap(self):
+        cfg = rg.scenario_config({"config": {"Daily cap": "Rolling: 0.01%."}}, "Rolling: 14.3%.")
+        self.assertEqual(cfg, {"Daily cap": "Rolling: 0.01%."})
+
+
+class TranscriptLeak(unittest.TestCase):
+    def test_the_transcript_folder_of_the_sandbox(self):
+        self.assertEqual(rg.transcript_dir("/home/u/github/ticket-loop-sandbox", "/home/u/.claude"),
+                         "/home/u/.claude/projects/-home-u-github-ticket-loop-sandbox")
+
+    def test_finds_new_files_after_a_run(self):
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "old"))
+            open(os.path.join(d, "old", "a.jsonl"), "w").close()
+            before = rg.list_files(d)
+            os.makedirs(os.path.join(d, "s1", "subagents"))
+            open(os.path.join(d, "s1", "subagents", "agent-x.meta.json"), "w").close()
+            self.assertEqual(rg.list_files(d) - before,
+                             {os.path.join("s1", "subagents", "agent-x.meta.json")})
+
+    def test_a_missing_folder_has_no_files(self):
+        self.assertEqual(rg.list_files("/nonexistent/folder/x"), set())
+
+    def test_leaked_files_go_into_the_notes(self):
+        def run(s, v):
+            return {"pass": True, "checks": [], "models": ["m"], "leaked": ["s1/agent-x.meta.json"]}
+        r = rg.run_comparison([{"name": "ships", "holdout": False}], 1, [], run, always(), {})
+        self.assertTrue(any("s1/agent-x.meta.json" in n and "transcript" in n
+                            for n in r["notes"]))
+
+
 class SandboxConfig(unittest.TestCase):
     CONFIG = "# Loop config\n\n## Models\n\n- Implementer: Sonnet.\n\n## Daily cap\n\n14.3% a day.\n"
 

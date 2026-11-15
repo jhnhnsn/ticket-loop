@@ -321,6 +321,41 @@ def _effort(dispatch):
                                       dispatch.get("effort") or "default")
 
 
+CAP_STOP = re.compile(r"cap reached", re.I)
+
+
+def not_measured(scenario, stream):
+    """Why a run measured nothing, or None. A run with no final report measures nothing; so
+    does a cap stop in a scenario that does not set its own Daily cap (the real cap stopped it)."""
+    if stream.get("report") is None:
+        return "no final report"
+    if "Daily cap" not in (scenario.get("config") or {}) and CAP_STOP.search(stream["report"]):
+        return "the real Daily cap stopped the run"
+    return None
+
+
+def scenario_config(scenario, cap):
+    """The sandbox config sections a scenario run sets: the loop's own Daily cap (so the
+    sandbox's cap matches the suite's check), then the scenario's own sections, which win."""
+    out = {"Daily cap": cap} if cap else {}
+    out.update(scenario.get("config") or {})
+    return out
+
+
+def transcript_dir(sandbox_path, config_dir):
+    """Claude Code's transcript folder for sessions in the sandbox clone."""
+    return os.path.join(config_dir, "projects",
+                        re.sub(r"[^A-Za-z0-9]", "-", os.path.abspath(sandbox_path)))
+
+
+def list_files(folder):
+    """Every file under a folder, as paths relative to it; none for a missing folder."""
+    out = set()
+    for top, _, names in os.walk(folder):
+        out.update(os.path.relpath(os.path.join(top, n), folder) for n in names)
+    return out
+
+
 def run_comparison(scenarios, repeats, targets, run_one, check_cap, conditions):
     """Run every scenario on both versions, round by round, and judge the result.
 
@@ -331,7 +366,7 @@ def run_comparison(scenarios, repeats, targets, run_one, check_cap, conditions):
     tally = {v: {} for v in VERSIONS}
     models = {v: set() for v in VERSIONS}
     efforts = {v: set() for v in VERSIONS}
-    runs, used, notes, stopped = [], [], [], None
+    runs, used, notes, stopped, unmeasured = [], [], [], None, {}
     total, done = repeats, 0
     per_round = 2 * len(scenarios)
 
@@ -368,13 +403,21 @@ def run_comparison(scenarios, repeats, targets, run_one, check_cap, conditions):
                 name = label(s)
                 efforts[v].update(_effort(d) for d in g.get("dispatches") or [])
                 t = tally[v].setdefault(name, {"passes": 0, "runs": 0})
-                t["runs"] += 1
-                t["passes"] += 1 if g["pass"] else 0
+                for f in g.get("leaked") or []:
+                    notes.append("new file in the sandbox's transcript folder after %s on the "
+                                 "%s: %s" % (name, v, f))
+                if g.get("not_measured"):
+                    unmeasured.setdefault(name, {u: 0 for u in VERSIONS})[v] += 1
+                else:
+                    t["runs"] += 1
+                    t["passes"] += 1 if g["pass"] else 0
                 models[v].update(g.get("models") or [])
                 if g.get("usage") is not None:
                     used.append(g["usage"])
                 row = {"scenario": name, "version": v, "round": done + 1, "pass": g["pass"],
                        "cost_usd": g.get("cost_usd")}
+                if g.get("not_measured"):
+                    row["not_measured"] = g["not_measured"]
                 if not s["holdout"]:
                     row["checks"] = g.get("checks")
                 runs.append(row)
@@ -389,9 +432,21 @@ def run_comparison(scenarios, repeats, targets, run_one, check_cap, conditions):
         j["reasons"] = ["the versions ran on different models (%s; %s): run the baseline again"
                         % (", ".join(sorted(models["baseline"])),
                            ", ".join(sorted(models["candidate"])))]
+    elif unmeasured and j["verdict"] in ("pass", "incomplete"):
+        # A run that measured nothing (the real cap stopped it) is no evidence: not a pass.
+        j["verdict"] = "inconclusive"
+        j["reasons"] = ["%s: not measured in %d baseline and %d candidate runs (the real Daily "
+                        "cap stopped them, or no final report)" % (n, u["baseline"], u["candidate"])
+                        for n, u in sorted(unmeasured.items())]
+        if stopped:
+            j["reasons"].append("stopped: " + stopped)
     elif stopped and j["verdict"] == "pass":
         j["verdict"] = "incomplete"
         j["reasons"] = ["stopped: " + stopped]
+    for n, u in unmeasured.items():
+        rows = j["holdout"] if n in held else j["scenarios"]
+        rows.setdefault(n, {"baseline": "0/0", "candidate": "0/0",
+                            "target": n in targets})["not_measured"] = u
     cond = dict(conditions)
     cond["models"] = {v: sorted(models[v]) for v in VERSIONS}
     cond["dispatch_efforts"] = {v: sorted(efforts[v]) for v in VERSIONS}
@@ -437,8 +492,9 @@ class Sandbox:
     parent, the clean-up after, and a check that the sandbox's main did not move.
     """
 
-    def __init__(self, path, work, repo=SANDBOX_REPO):
+    def __init__(self, path, work, repo=SANDBOX_REPO, cap=None, transcripts=None):
         self.path, self.work, self.repo = path, work, repo
+        self.cap, self.transcripts = cap, transcripts
         self.count = 0
 
     def git(self, *a, check=True):
@@ -468,12 +524,14 @@ class Sandbox:
         try:
             self.git("switch", "main")
             self.git("switch", "-c", branch)
-            if scenario.get("config"):
+            # The test branch carries the config change; the switch back to main restores it.
+            sections = scenario_config(scenario, self.cap)
+            if sections:
                 cfg = os.path.join(self.path, "docs", "agents", "ticket-loop.md")
                 with open(cfg) as fh:
                     text = fh.read()
                 with open(cfg, "w") as fh:
-                    fh.write(set_sections(text, scenario["config"]))
+                    fh.write(set_sections(text, sections))
                 self.git("add", "docs/agents/ticket-loop.md")
                 self.git("commit", "-m", "Regression scenario config")
             if scenario.get("settings_local") is not None:
@@ -505,7 +563,8 @@ class Sandbox:
                 self.gh("issue", "edit", str(tickets[key]["number"]), "--repo", self.repo,
                         "--add-label", "in-progress")
             before = usage()
-            env = {k: v for k, v in os.environ.items() if k != "CLAUDE_CODE_EFFORT_LEVEL"}
+            kept = list_files(self.transcripts) if self.transcripts else set()
+            env ={k: v for k, v in os.environ.items() if k != "CLAUDE_CODE_EFFORT_LEVEL"}
             prompt = "/ticket-loop:ticket-loop " + fill_args(scenario["args"], tickets, parent)
             # --no-session-persistence: Claude Code saves no transcript of the run. The
             # stream stays in memory; only a visible scenario's goes to a file.
@@ -516,6 +575,9 @@ class Sandbox:
                                cwd=self.path, stdin=subprocess.DEVNULL, capture_output=True,
                                text=True, env=env, timeout=3 * 3600)
             after = usage()
+            # --no-session-persistence does not stop a background subagent's meta file:
+            # report each new file, and delete none (the folder is outside this repo).
+            leaked = sorted(list_files(self.transcripts) - kept) if self.transcripts else []
             if not scenario["holdout"]:
                 out = os.path.join(self.work, "%s.jsonl" % branch.replace("/", "_"))
                 with open(out, "w") as fh:
@@ -530,6 +592,7 @@ class Sandbox:
                    "commits": [c.strip() for c in log.split("\x1e") if c.strip()]}
             g = grade(scenario["checks"], obs)
             g.update(models=s["models"], cost_usd=s["cost_usd"], dispatches=s["dispatches"],
+                     not_measured=not_measured(scenario, s), leaked=leaked,
                      usage=(after - before) if None not in (before, after) else None)
             return g
         finally:
@@ -607,13 +670,15 @@ def compare(opts):
         dirs[v], versions[v] = d, "%s@%s" % (ref if not os.path.isdir(ref) else "working-copy", sha)
         if new:
             made.append(d)
-    box = Sandbox(sandbox, work)
+    config_dir = os.path.expanduser(os.environ.get("CLAUDE_CONFIG_DIR", "~/.claude"))
+    box = Sandbox(sandbox, work, cap=cap, transcripts=transcript_dir(sandbox, config_dir))
     with open(os.path.join(sandbox, "docs", "agents", "ticket-loop.md"), "rb") as fh:
         box_cfg = hashlib.sha256(fh.read()).hexdigest()[:12]
     conditions = {"sandbox_main": box.main_sha(), "sandbox_config_sha256": box_cfg,
                   "model_flag": "sonnet", "effort": "CLAUDE_CODE_EFFORT_LEVEL unset; the "
                   "sandbox config's Models (each dispatch's effort: dispatch_efforts)",
                   "claude": _cmd(["claude", "--version"], check=False),
+                  "sandbox_daily_cap": "%s (each scenario with no Daily cap of its own)" % cap,
                   "stream_dir": "%s (visible scenarios only)" % work}
     try:
         result = run_comparison(
