@@ -4,6 +4,8 @@
   ticket-loop-record write <record.json>             add a record to the store
   ticket-loop-record write --followup <record.json>  add <record>.followup.json next to it
   ticket-loop-record pull                            pull the store from its remote
+  ticket-loop-record due <project>                   list the project's records older
+                                                     than 14 days with no followup
 
 The store is a git repo at $TICKET_LOOP_HOME (default ~/.ticket-loop/). Each
 record is one file, runs/<project>/<date>-<ticket>-<run ID>.json, and never
@@ -20,6 +22,7 @@ Test hooks (environment):
   TICKET_LOOP_HOME          the store folder in place of ~/.ticket-loop/
   TICKET_LOOP_STORE_REMOTE  the remote URL; a local bare repo works in tests
 """
+import datetime
 import json
 import os
 import re
@@ -31,6 +34,7 @@ CONFIG = os.path.join("docs", "agents", "ticket-loop.md")
 PROJECT = re.compile(r"^[A-Za-z0-9._-]+$")
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 RUN_ID = re.compile(r"^[A-Za-z0-9._:-]+$")
+FOLLOWUP_DAYS = 14
 SAFE = "letters, digits, '.', '_' and '-'"
 
 
@@ -165,7 +169,33 @@ def pull():
     return "run store: pulled"
 
 
+def due(project, today=None):
+    """The project's records older than FOLLOWUP_DAYS with no followup, one per line."""
+    store = store_path()
+    folder = os.path.join(store, "runs", project)
+    if not os.path.isdir(os.path.join(store, ".git")):
+        return "run store: no records due (no store yet)"
+    today = today or datetime.date.today()
+    names = os.listdir(folder) if os.path.isdir(folder) else []
+    found = []
+    for n in sorted(names):
+        if not n.endswith(".json") or n.endswith(".followup.json"):
+            continue
+        try:
+            day = datetime.date.fromisoformat(n[:10])
+        except ValueError:
+            continue
+        if (today - day).days > FOLLOWUP_DAYS and \
+                n[:-len(".json")] + ".followup.json" not in names:
+            found.append(f"runs/{project}/{n}")
+    return "\n".join(found) or "run store: no records due"
+
+
 def main(argv):
+    if argv[:1] == ["due"] and len(argv) == 2 and PROJECT.match(argv[1]) \
+            and argv[1] not in (".", ".."):
+        print(due(argv[1]))
+        return 0
     if argv[:1] == ["pull"] and len(argv) == 1:
         print(pull())
         return 0

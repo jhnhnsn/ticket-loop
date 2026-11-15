@@ -167,7 +167,7 @@ An example: `#121 · test queue · running the browser suite · since 14:02 · 0
 
    Done when sub-step 1's check let you carry on (or Daily cap skips it) and the rest succeeded; a failure is a stop condition.
 
-6. **Report.** Write the ticket's report for your hand-back, in a few lines: what shipped, with the ticket's number and title, how many research passes ran, with trimmed ones marked (`1 research pass (trimmed)`) (or "research skipped", or `research: not requested` for a ticket without the `research` label), each decision the user answered (step 3) and any taken on their behalf, and tickets filed. With another ticket of a parallel build still unshipped, go on with that ticket (see Parallel builds). Otherwise, back to step 1, unless that was the last ticket named.
+6. **Report.** Write the ticket's report for your hand-back, in a few lines: what shipped, with the ticket's number and title, how many research passes ran, with trimmed ones marked (`1 research pass (trimmed)`) (or "research skipped", or `research: not requested` for a ticket without the `research` label), each decision the user answered (step 3) and any taken on their behalf, and tickets filed. Then write the ticket's run record (see Run store, Run records) and add the script's line to the report. With another ticket of a parallel build still unshipped, go on with that ticket (see Parallel builds). Otherwise, back to step 1, unless that was the last ticket named.
 
 ## Hand-back
 
@@ -186,7 +186,7 @@ Every hand-back also names each claimed ticket that step 1 skipped, as `#84: ski
 - a cap stop: stop here, or cap reached in a headless run;
 - a decision needed in a headless run.
 
-For each such ticket, remove the `in-progress` label, keep the assignee, and post a release comment: `Released by <your agent label> (run <claim time>): <what is committed locally>.` A decision needed or cap reached hand-back that the launcher resumes keeps the claim. A headless run (no SubagentHandback) resumes no hand-back, so each hand-back that leaves a claimed ticket not shipped releases it.
+For each such ticket, remove the `in-progress` label, keep the assignee, and post a release comment: `Released by <your agent label> (run <claim time>): <what is committed locally>.` Then write its run record, with the stop condition as its result (see Run store, Run records), and put the script's line in the hand-back. A decision needed or cap reached hand-back that the launcher resumes keeps the claim. A headless run (no SubagentHandback) resumes no hand-back, so each hand-back that leaves a claimed ticket not shipped releases it.
 
 Before you hand back, write the `hand-back` step to the status file (see Status file). Whichever it is, add the report from step 6 of each ticket shipped since your last hand-back. That's all the launcher keeps, so leave out the working detail. **Dispatch** above says how to hand back in your session. A hand-back ends your turn of work. If the launcher resumes you with SendMessage, carry on from where you stopped: the run goes on until your next hand-back.
 
@@ -254,6 +254,20 @@ The **run store** holds the run records of all projects and machines: a git repo
 - `python3 <plugin>/scripts/ticket-loop-record write <record.json>` adds a record at `runs/<project>/<date>-<ticket>-<run ID>.json`. Write the record JSON to a file in your scratchpad first, never into the store. It needs `project`, `date` (`YYYY-MM-DD`), `ticket` (a number) and `run_id`; the rest of its content is open. The sandbox writes with the project `_sandbox`.
 - `python3 <plugin>/scripts/ticket-loop-record write --followup <record.json>` adds a later fact (such as the 14-day revert or reopen check) as `<record>.followup.json` next to its record. Records never change.
 - `python3 <plugin>/scripts/ticket-loop-record pull` pulls the store. Pull at the start of each run, before the 14-day check, and before each scorer or retro run.
+- `python3 <plugin>/scripts/ticket-loop-record due <project>` lists this project's records older than 14 days with no followup file, one store path per line, or `run store: no records due`.
+
+**Run records.** Every ticket of the run writes one record, shipped or stopped: headless runs and each ticket of a parallel build too. Write it in step 6 for a shipped ticket. Write it at the release for a ticket that a run-ending hand-back leaves not shipped (see Hand-back, Release). A decision needed or cap reached hand-back that the launcher resumes writes no record: the ticket is still in hand. The record is one JSON object with these keys:
+- `project`: the repo's name (`ticket-loop` for `jhnhnsn/ticket-loop`); `ticket`; `run_id`: the claim time from the claim comment (step 1, Claim); `date`: today, `YYYY-MM-DD`; `plugin_version`: the `version` in `<plugin>/.claude-plugin/plugin.json`.
+- `result`: `shipped`, or the stop condition in a few words.
+- `review_findings`: `{"standards": {...}, "spec": {...}}`, each a count of findings by kind, as the reviewer reported them.
+- `fix_rounds`: the number of implementer dispatches after the first; `checks_green_first_try`: true or false.
+- `test_plan`: `{"passed_first_try": true}`, or `{"passed_first_try": false, "failures": <n>}`.
+- `decisions_asked` and `decisions_taken`: lists, one short line per decision (asked the user, or taken for the user).
+- `research_passes`: `{"count": <n>, "trimmed": <n>}`, or `"not requested"` or `"skipped"`.
+- `usage`: `{"week_percent_before": <n>, "week_percent_after": <n>}`, tokencount's `week.percent_used` at the ticket's first cap check and at its record; null where it can't be read.
+- `roles`: each role's model ID and effort, as your roles line gives them, with your own model ID for the coordinator.
+
+**The 14-day check.** At the start of each run, after the pull, run `due` for this project. For each path it lists, read the record with the Read tool, then check whether the ticket was reverted or reopened in the 14 days after the record's date: `git log --since=<date> --until=<date + 14 days> --grep 'Revert' --grep '#<ticket>' --all-match --oneline`, and the ticket's `state` and `closedAt` through the config's read command. Write a followup file through `write --followup`, with the record's `project`, `date`, `ticket` and `run_id`, plus `checked` (today), `reverted` and `reopened` (true or false). Never edit the old record. A check that can't be read writes nothing: the next run tries again.
 
 A write commits in the store, then pushes when the user-level `TICKET_LOOP_STORE_REMOTE` names a private remote. At its first write on a machine, the script clones that remote, or makes a local repo without one. It skips a project whose loop config has a `## Run records` section of `Off.`; with no section, the project writes records.
 
