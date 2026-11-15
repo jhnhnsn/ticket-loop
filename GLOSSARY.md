@@ -65,6 +65,7 @@ This project's own terms. With a `## Writing` section of `ASD-STE100`, they are 
 - **status file:** `.ticket-loop-status` at the main checkout's root, the coordinator's one-line state; git ignores it.
 - **run store:** the git repo in the home folder (`~/.ticket-loop/`, or `TICKET_LOOP_HOME`) that holds the run records of all projects, synced through a private remote.
 - **run record:** one JSON file in the run store, at `runs/<project>/<date>-<ticket>-<run ID>.json`, written only by `scripts/ticket-loop-record`. It never changes; a later fact goes in a followup file next to it.
+- **followup file:** a later fact about a run record (such as the 14-day revert or reopen check), at `<record>.followup.json` next to the record.
 - **changelog:** `CHANGELOG.md`, the record of what each shipped ticket changed.
 - **ADR:** an architecture decision record, in `docs/adr/`.
 - **glossary:** this file.

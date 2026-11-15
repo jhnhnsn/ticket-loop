@@ -226,7 +226,7 @@ Hand back, saying why, when:
 - the last named ticket has shipped, or the rest were skipped: say what shipped and what was skipped and why. If that finished the tickets' parent, the milestone stop above applies too;
 - the frontier is empty with tickets still open (all blocked, or ready-for-human): say what blocks them;
 - a named ticket's blockers can't be read in step 1 (the command is refused after the simpler retry the Bash rules ask for, errors, or returns nothing usable, such as empty output where a count or a list should be): dispatch nothing, and name the ticket and why the read failed, quoting the command and its error;
-- something only the user can do: a click in a running app, a device check, credentials, a stuck tool, such as a plain single Bash command refused after a simpler retry (see Bash rules);
+- something only the user can do: a click in a running app, a device check, credentials, a stuck tool, such as a plain single Bash command refused after a simpler retry (see Bash rules), except a record script call (see Run store);
 - a push, publish or check fails in a way a fix can't safely cover;
 - the user answers **stop here** to a cap reached hand-back (see Daily cap);
 - anything else the config lists as a stop.
@@ -257,7 +257,7 @@ The **run store** holds the run records of all projects and machines: a git repo
 
 A write commits in the store, then pushes when the user-level `TICKET_LOOP_STORE_REMOTE` names a private remote. At its first write on a machine, the script clones that remote, or makes a local repo without one. It skips a project whose loop config has a `## Run records` section of `Off.`; with no section, the project writes records.
 
-The script never stops a run: it always exits 0 (2 only for wrong usage) and prints one line. Put the line in the ticket's report as it is, for example `run record: not written (store not available)` (a cloud session, no permission, no clone), or `run record: written (<path>), push failed: the commit stays local, and the next write pushes it`. Never write or edit the store with another tool: a deny rule in the user settings blocks it.
+The script never stops a run: it always exits 0 (2 only for wrong usage) and prints one line. Put the line in the ticket's report as it is, for example `run record: not written (store not available)` (a cloud session, no permission, no clone), or `run record: written (<path>), push failed: the commit stays local, and the next write pushes it`. If a record script call is refused or fails and prints no line, put `run record: not written (store not available)` in the report and continue the run: it is not a stop. Never write or edit the store with another tool: a deny rule in the user settings blocks it.
 
 ## Constraints
 

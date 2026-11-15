@@ -156,6 +156,23 @@ class Store(unittest.TestCase):
         self.assertEqual(r.stdout.strip(), "run record: not written (off in the loop config)")
         self.assertFalse(os.path.exists(self.home))
 
+    def test_opt_out_needs_off_alone(self):
+        os.makedirs(os.path.join(self.work, "docs", "agents"))
+        with open(os.path.join(self.work, "docs", "agents", "ticket-loop.md"), "w") as f:
+            f.write("# Loop config\n\n## Run records\n\nOff. later, after #60.\n")
+        r = self.run_script("write", self.record_file())
+        self.assertEqual(r.stdout.strip(), f"run record: written ({NAME}, no remote)")
+
+    def test_empty_store_folder_clones_the_remote(self):
+        remote = self.bare()
+        self.run_script("write", self.record_file(), remote=remote)
+        other = os.path.join(self.tmp.name, "machine2")
+        os.mkdir(other)
+        r = self.run_script("write", self.record_file(dict(RECORD, run_id="r2")),
+                            remote=remote, home=other)
+        self.assertIn("pushed", r.stdout)
+        self.assertIn(NAME, self.committed(other))
+
     def test_pull(self):
         remote = self.bare()
         other = os.path.join(self.tmp.name, "machine2")

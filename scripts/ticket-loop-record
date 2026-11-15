@@ -15,6 +15,10 @@ The script never fails a run: every store outcome exits 0 with one line on
 stdout for the ticket report. Only wrong usage exits 2. A project opts out with
 a `## Run records` section of `Off.` in docs/agents/ticket-loop.md (the current
 directory's loop config).
+
+Test hooks (environment):
+  TICKET_LOOP_HOME          the store folder in place of ~/.ticket-loop/
+  TICKET_LOOP_STORE_REMOTE  the remote URL; a local bare repo works in tests
 """
 import json
 import os
@@ -54,7 +58,7 @@ def opted_out(config=CONFIG):
     except OSError:
         return False
     m = re.search(r"^## Run records[ \t]*\n(.*?)(?=^## |\Z)", text, re.M | re.S)
-    return bool(m) and m.group(1).strip().startswith("Off.")
+    return bool(m) and m.group(1).strip() == "Off."
 
 
 def check(record):
