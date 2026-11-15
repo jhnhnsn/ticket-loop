@@ -12,8 +12,9 @@ with no LLM (stream-json, the sandbox tracker, git log), and writes one result f
 comparison. See regression/README.md.
 
 Environment:
-  TICKET_LOOP_HOME          the run store (default ~/.ticket-loop); results go to
-                            runs/_sandbox/regression/ in it
+  TICKET_LOOP_HOME          the run store (default ~/.ticket-loop); the result goes to
+                            runs/_sandbox/ in it, through scripts/ticket-loop-record
+  TICKET_LOOP_STORE_REMOTE  the run store's remote, as ticket-loop-record reads it
   TICKET_LOOP_HOLDOUT       the held-out scenario clone (default ~/.ticket-loop-holdout)
   TICKET_LOOP_SANDBOX       the sandbox clone (default ~/github/ticket-loop-sandbox)
   TICKET_LOOP_USAGE_JSON    a saved tokencount --json report to use instead of tokencount
@@ -35,6 +36,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 SANDBOX_REPO = "jhnhnsn/ticket-loop-sandbox"
 DEFAULT_REPEATS = 5
+SCENARIO_DIR = os.path.join(ROOT, "regression", "scenarios")
+RECORD_SCRIPT = os.path.join(HERE, "ticket-loop-record")
+# The tools a headless scenario run may use: the same list as the sandbox README's
+# headless command. Keep the two the same.
+ALLOWED_TOOLS = ("Bash(gh:*) Bash(git:*) Bash(python3:*) Read Edit Write Glob Grep Skill "
+                 "Agent SendMessage")
 
 
 # ------------------------------------------------------------------- stream-json
@@ -55,7 +62,10 @@ def parse_stream(text):
         msg = ev.get("message") or {}
         if kind == "assistant" and msg.get("model"):
             models.add(msg["model"])
-        for part in msg.get("content") or [] if isinstance(msg.get("content"), list) else []:
+        parts = msg.get("content")
+        if not isinstance(parts, list):
+            parts = []
+        for part in parts:
             if not isinstance(part, dict):
                 continue
             if part.get("type") == "tool_use" and part.get("name") in ("Agent", "Task"):
@@ -292,10 +302,23 @@ def load_scenarios(visible_dir, holdout_root):
     return out
 
 
+def visible_scenarios():
+    """The visible scenarios only, with no held-out clone opened."""
+    return load_scenarios(SCENARIO_DIR, os.devnull)
+
+
 # ------------------------------------------------------------------- comparison
 
 VERSIONS = ("baseline", "candidate")
 DEFAULT_RUN_SHARE = 0.5   # % of the weekly usage one Sonnet scenario run takes, until measured
+
+
+def _effort(dispatch):
+    """One dispatch's agent type, model and effort, with no description (it can name a
+    held-out ticket)."""
+    return "%s model=%s effort=%s" % (dispatch.get("subagent_type") or "general-purpose",
+                                      dispatch.get("model") or "default",
+                                      dispatch.get("effort") or "default")
 
 
 def run_comparison(scenarios, repeats, targets, run_one, check_cap, conditions):
@@ -307,6 +330,7 @@ def run_comparison(scenarios, repeats, targets, run_one, check_cap, conditions):
     """
     tally = {v: {} for v in VERSIONS}
     models = {v: set() for v in VERSIONS}
+    efforts = {v: set() for v in VERSIONS}
     runs, used, notes, stopped = [], [], [], None
     total, done = repeats, 0
     per_round = 2 * len(scenarios)
@@ -336,8 +360,13 @@ def run_comparison(scenarios, repeats, targets, run_one, check_cap, conditions):
                         stopped = cap["reason"]
                         break
                 first = False
-                g = run_one(s, v)
+                try:
+                    g = run_one(s, v)
+                except Exception as e:   # keep what finished: the result file still gets written
+                    stopped = "error in %s on the %s: %s" % (label(s), v, e)
+                    break
                 name = label(s)
+                efforts[v].update(_effort(d) for d in g.get("dispatches") or [])
                 t = tally[v].setdefault(name, {"passes": 0, "runs": 0})
                 t["runs"] += 1
                 t["passes"] += 1 if g["pass"] else 0
@@ -365,6 +394,7 @@ def run_comparison(scenarios, repeats, targets, run_one, check_cap, conditions):
         j["reasons"] = ["stopped: " + stopped]
     cond = dict(conditions)
     cond["models"] = {v: sorted(models[v]) for v in VERSIONS}
+    cond["dispatch_efforts"] = {v: sorted(efforts[v]) for v in VERSIONS}
     cond["scenarios"] = [label(s) for s in scenarios]
     return dict(j, conditions=cond, targets=list(targets), stopped=stopped, notes=notes,
                 repeats={"wanted": repeats, "done": done}, runs=runs)
@@ -421,11 +451,17 @@ class Sandbox:
         out = self.git("ls-remote", "origin", "main")
         return out.split()[0] if out else None
 
+    def branch(self, scenario, version):
+        """The test branch name; a held-out scenario's shows only its opaque ID."""
+        if scenario["holdout"]:
+            tag = "h" + holdout_id(scenario["name"])[-8:]
+        else:
+            tag = scenario["name"][:20]
+        return "test/regression-%s-%s-%d" % (tag, version, self.count)
+
     def run(self, scenario, plugin_dir, version, usage):
         self.count += 1
-        branch = "test/regression-%s-%s-%d" % (scenario["name"][:20] if not scenario["holdout"]
-                                              else "h" + holdout_id(scenario["name"])[-8:],
-                                              version, self.count)
+        branch = self.branch(scenario, version)
         main = self.main_sha()
         made, tickets, parent = [], {}, None
         local = os.path.join(self.path, ".claude", "settings.local.json")
@@ -471,17 +507,20 @@ class Sandbox:
             before = usage()
             env = {k: v for k, v in os.environ.items() if k != "CLAUDE_CODE_EFFORT_LEVEL"}
             prompt = "/ticket-loop:ticket-loop " + fill_args(scenario["args"], tickets, parent)
-            out = os.path.join(self.work, "%s.jsonl" % branch.replace("/", "_"))
-            with open(out, "w") as fh:
-                subprocess.run(["claude", "-p", prompt, "--plugin-dir", plugin_dir,
-                                "--model", "sonnet", "--output-format", "stream-json", "--verbose",
-                                "--allowedTools", "Bash(gh:*) Bash(git:*) Bash(python3:*) Read "
-                                "Edit Write Glob Grep Skill Agent SendMessage"],
-                               cwd=self.path, stdin=subprocess.DEVNULL, stdout=fh,
-                               stderr=subprocess.DEVNULL, env=env, timeout=3 * 3600)
+            # --no-session-persistence: Claude Code saves no transcript of the run. The
+            # stream stays in memory; only a visible scenario's goes to a file.
+            p = subprocess.run(["claude", "-p", prompt, "--plugin-dir", plugin_dir,
+                                "--model", "sonnet", "--no-session-persistence",
+                                "--output-format", "stream-json", "--verbose",
+                                "--allowedTools", ALLOWED_TOOLS],
+                               cwd=self.path, stdin=subprocess.DEVNULL, capture_output=True,
+                               text=True, env=env, timeout=3 * 3600)
             after = usage()
-            with open(out) as fh:
-                s = parse_stream(fh.read())
+            if not scenario["holdout"]:
+                out = os.path.join(self.work, "%s.jsonl" % branch.replace("/", "_"))
+                with open(out, "w") as fh:
+                    fh.write(p.stdout)
+            s = parse_stream(p.stdout)
             for key, t in tickets.items():
                 v = json.loads(self.gh("issue", "view", str(t["number"]), "--repo", self.repo,
                                        "--json", "state,labels"))
@@ -490,7 +529,7 @@ class Sandbox:
             obs = {"stream": s, "tickets": tickets, "main_moved": self.main_sha() != main,
                    "commits": [c.strip() for c in log.split("\x1e") if c.strip()]}
             g = grade(scenario["checks"], obs)
-            g.update(models=s["models"], cost_usd=s["cost_usd"],
+            g.update(models=s["models"], cost_usd=s["cost_usd"], dispatches=s["dispatches"],
                      usage=(after - before) if None not in (before, after) else None)
             return g
         finally:
@@ -550,11 +589,10 @@ def _checkout(ref, work, name):
 
 
 def compare(opts):
-    home = os.path.expanduser(os.environ.get("TICKET_LOOP_HOME", "~/.ticket-loop"))
     hold = os.path.expanduser(os.environ.get("TICKET_LOOP_HOLDOUT", "~/.ticket-loop-holdout"))
     sandbox = os.path.expanduser(os.environ.get("TICKET_LOOP_SANDBOX",
                                                 "~/github/ticket-loop-sandbox"))
-    scenarios = load_scenarios(os.path.join(ROOT, "regression", "scenarios"), hold)
+    scenarios = load_scenarios(SCENARIO_DIR, hold)
     if opts.only:
         scenarios = [s for s in scenarios if s["holdout"] or s["name"] in opts.only]
     if not any(s["holdout"] for s in scenarios):
@@ -574,8 +612,9 @@ def compare(opts):
         box_cfg = hashlib.sha256(fh.read()).hexdigest()[:12]
     conditions = {"sandbox_main": box.main_sha(), "sandbox_config_sha256": box_cfg,
                   "model_flag": "sonnet", "effort": "CLAUDE_CODE_EFFORT_LEVEL unset; the "
-                  "sandbox config's Models", "claude": _cmd(["claude", "--version"], check=False),
-                  "stream_dir": work}
+                  "sandbox config's Models (each dispatch's effort: dispatch_efforts)",
+                  "claude": _cmd(["claude", "--version"], check=False),
+                  "stream_dir": "%s (visible scenarios only)" % work}
     try:
         result = run_comparison(
             scenarios, opts.repeats, opts.target,
@@ -586,12 +625,38 @@ def compare(opts):
         for d in made:
             _cmd(["git", "-C", ROOT, "worktree", "remove", "--force", d], check=False)
     result["versions"] = versions
-    path = write_result(home, result, datetime.now(timezone.utc))
+    line = write_result(result, datetime.now(timezone.utc), work)
     print("%s: %s" % (result["verdict"], "; ".join(result["reasons"]) or "no reasons"))
     for n in result["notes"]:
         print("note: " + n)
-    print("result file: " + path)
+    print(line)
     return 0 if result["verdict"] == "pass" else 1
+
+
+def _slug(text):
+    return re.sub(r"[^A-Za-z0-9._-]+", "-", str(text)).strip("-")[:40] or "x"
+
+
+def write_result(result, now, work, env=None):
+    """Give the comparison's one result file to the run store's record script, which
+    commits it (and pushes it, with a remote) as a new record; return the script's line.
+
+    The record is runs/_sandbox/<date>-0-regression-<baseline>-vs-<candidate>-<id>.json:
+    a comparison has no ticket, so its ticket is 0.
+    """
+    v = result.get("versions") or {}
+    run_id = "regression-%s-vs-%s-%s" % (_slug(v.get("baseline")), _slug(v.get("candidate")),
+                                         os.urandom(3).hex())
+    record = dict(result, project="_sandbox", date=now.strftime("%Y-%m-%d"), ticket=0,
+                  run_id=run_id)
+    fd, path = tempfile.mkstemp(suffix=".json", dir=work)
+    try:
+        with os.fdopen(fd, "w") as fh:
+            json.dump(record, fh, indent=2, sort_keys=True)
+        return _cmd([sys.executable, RECORD_SCRIPT, "write", path], cwd=ROOT, check=False,
+                    env=env)
+    finally:
+        os.remove(path)
 
 
 def main(argv):
@@ -612,7 +677,7 @@ def main(argv):
     a = ap.parse_args(argv)
     if a.cmd == "list":
         hold = os.path.expanduser(os.environ.get("TICKET_LOOP_HOLDOUT", "~/.ticket-loop-holdout"))
-        for s in load_scenarios(os.path.join(ROOT, "regression", "scenarios"), hold):
+        for s in load_scenarios(SCENARIO_DIR, hold):
             print(holdout_id(s["name"]) if s["holdout"] else s["name"])
         return 0
     if a.cmd == "grade":
@@ -625,35 +690,10 @@ def main(argv):
         v = grade(scen["checks"], obs)
         print(json.dumps(v, indent=2))
         return 0 if v["pass"] else 1
-    unknown = set(a.only) - {s["name"] for s in load_scenarios(
-        os.path.join(ROOT, "regression", "scenarios"), "/nonexistent")}
-    if unknown or set(a.target) - (set(a.only) or {s["name"] for s in load_scenarios(
-            os.path.join(ROOT, "regression", "scenarios"), "/nonexistent")}):
+    visible = {s["name"] for s in visible_scenarios()}
+    if set(a.only) - visible or set(a.target) - (set(a.only) or visible):
         ap.error("unknown scenario in --only or --target")
     return compare(a)
-
-
-def _slug(text):
-    return re.sub(r"[^A-Za-z0-9._-]+", "-", str(text)).strip("-")[:40] or "x"
-
-
-def write_result(home, result, now):
-    """Write the comparison's one result file as a new file; never change an old one."""
-    folder = os.path.join(home, "runs", "_sandbox", "regression")
-    os.makedirs(folder, exist_ok=True)
-    v = result.get("versions") or {}
-    stem = "%s-%s-vs-%s" % (now.strftime("%Y-%m-%d"), _slug(v.get("baseline")),
-                            _slug(v.get("candidate")))
-    while True:
-        path = os.path.join(folder, "%s-%s.json" % (stem, os.urandom(3).hex()))
-        try:
-            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
-        except FileExistsError:
-            continue
-        with os.fdopen(fd, "w") as fh:
-            json.dump(result, fh, indent=2, sort_keys=True)
-            fh.write("\n")
-        return path
 
 
 if __name__ == "__main__":

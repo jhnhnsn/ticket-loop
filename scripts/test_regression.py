@@ -278,6 +278,32 @@ class Comparison(unittest.TestCase):
         self.assertEqual(r["verdict"], "invalid")
         self.assertIn("run the baseline again", r["reasons"][0])
 
+    def test_an_error_in_a_run_stops_and_keeps_what_finished(self):
+        run, calls = fake_run(ALL_PASS)
+
+        def flaky(s, v):
+            if len(calls) == 3:
+                raise RuntimeError("the sandbox's main moved")
+            return run(s, v)
+        r = rg.run_comparison(SCEN, 1, [], flaky, always(), {})
+        self.assertEqual(len(calls), 3)
+        self.assertIn("the sandbox's main moved", r["stopped"])
+        self.assertEqual(r["scenarios"]["ships"]["candidate"], "1/1")
+        self.assertEqual(r["verdict"], "incomplete")
+
+    def test_records_the_effort_of_each_dispatch_with_the_conditions(self):
+        b, _ = fake_run(ALL_PASS)
+
+        def run(s, v):
+            g = b(s, v)
+            g["dispatches"] = [{"subagent_type": "ticket-loop:coordinator", "model": None,
+                                "effort": "high", "description": "secret words"}]
+            return g
+        r = rg.run_comparison(SCEN, 1, [], run, always(), {})
+        self.assertEqual(r["conditions"]["dispatch_efforts"]["candidate"],
+                         ["ticket-loop:coordinator model=default effort=high"])
+        self.assertNotIn("secret words", json.dumps(r))
+
 
 class SandboxConfig(unittest.TestCase):
     CONFIG = "# Loop config\n\n## Models\n\n- Implementer: Sonnet.\n\n## Daily cap\n\n14.3% a day.\n"
@@ -297,16 +323,25 @@ class SandboxConfig(unittest.TestCase):
 
 
 class ResultFile(unittest.TestCase):
-    def test_writes_one_new_file_in_the_sandbox_runs_folder(self):
-        with tempfile.TemporaryDirectory() as home:
-            res = {"verdict": "pass", "versions": {"baseline": "v1.21.0", "candidate": "abc1234"}}
-            p1 = rg.write_result(home, res, NOW)
-            p2 = rg.write_result(home, res, NOW)
-            self.assertTrue(p1.startswith(os.path.join(home, "runs", "_sandbox", "regression", "")))
-            self.assertRegex(os.path.basename(p1), r"^2026-11-15-v1\.21\.0-vs-abc1234-\w+\.json$")
-            self.assertNotEqual(p1, p2)
-            with open(p1) as fh:
-                self.assertEqual(json.load(fh)["verdict"], "pass")
+    def test_writes_a_new_committed_record_through_the_record_script(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = os.path.join(tmp, "store")
+            env = dict(os.environ, TICKET_LOOP_HOME=home)
+            env.pop("TICKET_LOOP_STORE_REMOTE", None)
+            res = {"verdict": "pass", "versions": {"baseline": "a133728@a133728",
+                                                   "candidate": "working-copy@abc1234"}}
+            l1 = rg.write_result(res, NOW, tmp, env=env)
+            l2 = rg.write_result(res, NOW, tmp, env=env)
+            self.assertRegex(l1, r"^run record: written \(runs/_sandbox/2026-11-15-0-regression-"
+                                 r"a133728-a133728-vs-working-copy-abc1234-\w+\.json, no remote\)$")
+            self.assertNotEqual(l1, l2)
+            name = l1.split("(", 1)[1].split(",", 1)[0]
+            with open(os.path.join(home, name)) as fh:
+                rec = json.load(fh)
+            self.assertEqual((rec["verdict"], rec["project"], rec["ticket"]), ("pass", "_sandbox", 0))
+            log = rg._cmd(["git", "-C", home, "log", "--format=%s"])
+            self.assertEqual(log.count("Add runs/_sandbox/"), 2)
+            self.assertEqual(os.listdir(tmp), ["store"])
 
 
 class Scenarios(unittest.TestCase):
@@ -325,6 +360,12 @@ class Scenarios(unittest.TestCase):
     def test_no_held_out_clone_is_a_note_not_an_error(self):
         got = rg.load_scenarios(os.path.join(ROOT, "regression", "scenarios"), "/nonexistent")
         self.assertTrue(all(not s["holdout"] for s in got))
+
+    def test_refused_bash_fails_a_run_with_no_refusal(self):
+        s = {x["name"]: x for x in rg.visible_scenarios()}["refused-bash"]
+        refused = [c for c in s["checks"] if c["check"] == "refused"]
+        obs = {"stream": rg.parse_stream(""), "tickets": {}, "commits": [], "main_moved": False}
+        self.assertFalse(rg.grade(refused, obs)["pass"])
 
     def test_every_visible_scenario_is_well_formed(self):
         for s in rg.load_scenarios(os.path.join(ROOT, "regression", "scenarios"), "/nonexistent"):

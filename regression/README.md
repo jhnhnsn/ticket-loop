@@ -5,7 +5,8 @@ A fixed set of sandbox scenarios, made from real past failures, that tests a loo
 - **Runner and graders:** `scripts/ticket-loop-regression` (unit tests: `scripts/test_regression.py`, on saved stream-json in `scripts/fixtures/regression/`). Grading uses no LLM: it reads the stream-json, the sandbox tracker and the sandbox's `git log`.
 - **Visible scenarios:** `regression/scenarios/*.json`.
 - **Held-out scenarios:** only in `~/.ticket-loop-holdout/scenarios/*.json`, a clone of a private repo. Only this suite opens it. A result file names each one by an opaque ID (`holdout-<hash>`), with its pass rates and no check details.
-- **Results:** one new file per comparison, at `$TICKET_LOOP_HOME/runs/_sandbox/regression/<date>-<baseline>-vs-<candidate>-<id>.json` (default `~/.ticket-loop/`, the run store, #57). The raw stream-json of each run stays in the temporary folder the result's `conditions.stream_dir` names.
+- **Results:** one new record per comparison, at `runs/_sandbox/<date>-0-regression-<baseline>-vs-<candidate>-<id>.json` in the run store (`$TICKET_LOOP_HOME`, default `~/.ticket-loop/`, #57). The suite gives it to `scripts/ticket-loop-record`, which commits it and, with `TICKET_LOOP_STORE_REMOTE` set, pushes it. A comparison has no ticket, so the record's ticket is 0. A run that stops with an error (a `gh` failure, a timeout, a moved `main`) still writes what finished.
+- **Raw streams:** each run is headless with `--no-session-persistence`, so Claude Code saves no transcript of it. A visible scenario's stream-json goes to the temporary folder that `conditions.stream_dir` names. A held-out scenario's stream stays in memory and is never written.
 
 ## When it runs
 
@@ -19,8 +20,8 @@ scripts/ticket-loop-regression compare --baseline a133728 [--target claimed-skip
 
 ## The rules
 
-- **Same conditions:** each run is headless, `--model sonnet`, with `CLAUDE_CODE_EFFORT_LEVEL` unset, from the sandbox's `main`. The result records the model IDs of both versions, the sandbox's `main` commit, its config hash, the `claude` version and the scenario set. Different model IDs make the comparison `invalid`: run the baseline again on the new model.
-- **Order:** round by round, each scenario on the baseline and then on the candidate, so a stop leaves both versions with the same runs.
+- **Same conditions:** each run is headless, `--model sonnet`, with `CLAUDE_CODE_EFFORT_LEVEL` unset, from the sandbox's `main`. The result records the model IDs of both versions, the agent type, model and effort of each version's dispatches (`conditions.dispatch_efforts`), the sandbox's `main` commit, its config hash, the `claude` version and the scenario set. Different model IDs make the comparison `invalid`: run the baseline again on the new model.
+- **Order:** round by round, each scenario on the baseline and then on the candidate. A stop can come between the two, so the baseline can have one run more than the candidate; the pass rule compares rates, not counts.
 - **Pass rule:** a change passes only if each `--target` scenario's pass rate goes up, and no other scenario's rate goes down by more than the noise. The noise is the standard error of the difference of the two rates, and never less than one run's share (1/5 at 5 repeats). With no target, the comparison checks only that nothing got worse.
 - **Held-out check:** reported apart. A held-out scenario that gets worse fails the change; when a visible target improved too, the reason says overfitting.
 - **The cap:** before each scenario run, the suite reads tokencount. It stops, and writes what finished as `incomplete`, when the tokencount rolling guard is not armed, the loop's Daily cap (this repo's loop config) is reached, or the cap is unreadable. With little cap left, it runs fewer rounds, and the result's `notes` say so. A Sonnet run counts as 0.5% of the week until the suite has measured one.
@@ -30,8 +31,10 @@ scripts/ticket-loop-regression compare --baseline a133728 [--target claimed-skip
 
 ```json
 {"name": "claimed-skip", "from": "#49: ...",
- "tickets": [{"key": "a", "title": "...", "body": "...", "labels": ["ready-for-agent"]}],
- "claim": ["a"], "blocked_by": [["b", "a"]],
+ "tickets": [{"key": "a", "title": "...", "body": "...", "labels": ["ready-for-agent"]},
+             {"key": "b", "title": "...", "body": "...", "labels": ["ready-for-agent"]},
+             {"key": "c", "title": "...", "body": "...", "labels": ["ready-for-agent"]}],
+ "claim": ["a"], "blocked_by": [["c", "b"]],
  "config": {"Daily cap": "Rolling: 0.01% of the plan's weekly usage per day."},
  "settings_local": {"permissions": {"deny": ["Bash(gh api:*)"]}},
  "args": "{parent}",
@@ -50,5 +53,5 @@ The loop never changes user settings or makes repos outside this one, so do thes
 2. Clone it: `gh repo clone jhnhnsn/ticket-loop-holdout ~/.ticket-loop-holdout`
 3. Put held-out scenarios in `~/.ticket-loop-holdout/scenarios/`, in the format above, and commit and push them. Write them yourself, and never in an agent session.
 4. Add these deny rules to `permissions.deny` in `~/.claude/settings.json`, so no agent reads or edits the held-out set:
-   `"Read(~/.ticket-loop-holdout/**)"`, `"Edit(~/.ticket-loop-holdout/**)"`, `"Write(~/.ticket-loop-holdout/**)"`, `"Bash(*ticket-loop-holdout*)"`
+   `"Read(~/.ticket-loop-holdout/**)"`, `"Edit(~/.ticket-loop-holdout/**)"`, `"Bash(*ticket-loop-holdout*)"` (an `Edit(...)` rule blocks both the Edit and the Write tool)
 5. Before a comparison, arm the tokencount rolling guard: `python3 "<tokencount path>/tokencount" guard set --rolling 14.3 --window week` (the loop's Daily cap share).

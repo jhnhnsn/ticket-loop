@@ -54,7 +54,7 @@ Spec #1 for the coordinator work, and the Claude Code docs (code.claude.com) for
 
 ## Ship
 
-Push `main` after every ticket. Publish once per milestone, when the parent closes: bump the minor `version` in `.claude-plugin/plugin.json` (#1 → 1.9.0), commit and push, so `claude plugin update` picks it up.
+Push `main` after every ticket. Publish once per milestone, when the parent closes. Before the publish, run one full regression comparison against the last published version: `scripts/ticket-loop-regression compare --baseline <publish commit>` (find it with `git log --grep '^Publish' -1`; see `regression/README.md`). Put its verdict and record name in the milestone report. On any verdict other than `pass`, stop before the publish and give the result to the user. Then bump the minor `version` in `.claude-plugin/plugin.json` (#1 → 1.9.0), commit and push, so `claude plugin update` picks it up.
 
 ## Changelog
 
@@ -65,6 +65,8 @@ Push `main` after every ticket. Publish once per milestone, when the parent clos
 Besides the built-in ones: stop before any change outside this repo and the sandbox (the plugin cache, user settings, other repos).
 
 Exception: writes to the run store (`~/.ticket-loop/`, or `TICKET_LOOP_HOME`) through `scripts/ticket-loop-record` are allowed.
+
+Exception: a run of `scripts/ticket-loop-regression compare` is allowed. It reads the held-out clone, works in the sandbox and in temporary worktrees, and writes its result through `scripts/ticket-loop-record`. No agent reads or changes the held-out clone in any other way.
 
 ## Models
 
