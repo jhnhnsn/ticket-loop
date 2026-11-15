@@ -53,6 +53,14 @@ If the user says yes:
 
 If the user says no, or the setting has a type other than `command`, change nothing. Tell the user how to add it later. Step 4 records the answer in the config.
 
+**Run store.** The loop writes run records to the run store, `~/.ticket-loop/` (see the coordinator's Run store section). Don't ask whether the project writes records: it does, unless the user later adds a `## Run records` section of `Off.` to the config. The loop never changes user settings, so show the user these steps, one time on each machine, and don't do them:
+
+1. Add to the `permissions` of `~/.claude/settings.json` an allow rule for the record script, `"Bash(python3 *scripts/ticket-loop-record *)"`, and deny rules for direct writes to the store, `"Write(~/.ticket-loop/**)"` and `"Edit(~/.ticket-loop/**)"`. With a `TICKET_LOOP_HOME`, use that path in the deny rules.
+2. To sync across machines, make a private remote one time: `gh repo create <owner>/ticket-loop-runs --private`. Don't run it yourself.
+3. Name the remote in the `env` of `~/.claude/settings.json`: `"TICKET_LOOP_STORE_REMOTE": "git@github.com:<owner>/ticket-loop-runs.git"`. To move the store, set `TICKET_LOOP_HOME` there too.
+
+Without a remote, the store stays a local repo on that machine.
+
 ## 4. Write it
 
 Write `docs/agents/ticket-loop.md` with one short section per question above, in that order, each the confirmed answer in a few lines: commands in backticks, files as paths, no rationale beyond a clause. The Tickets section lists the labels, `in-progress` (a ticket claimed by a running loop) among them, and has a line `Read a ticket: <read command>.` In the Test queue section, list the test hooks the app has. Last, add a `## Status line` section with the answer from step 3: `Added.`, `Declined.` or `Not added: the statusLine type is not command.`

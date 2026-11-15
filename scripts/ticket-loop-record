@@ -1,0 +1,179 @@
+#!/usr/bin/env python3
+"""The ticket-loop run store: the one way to write a run record.
+
+  ticket-loop-record write <record.json>             add a record to the store
+  ticket-loop-record write --followup <record.json>  add <record>.followup.json next to it
+  ticket-loop-record pull                            pull the store from its remote
+
+The store is a git repo at $TICKET_LOOP_HOME (default ~/.ticket-loop/). Each
+record is one file, runs/<project>/<date>-<ticket>-<run ID>.json, and never
+changes. $TICKET_LOOP_STORE_REMOTE names a private remote: a write pushes after
+its commit, and the first write on a new machine clones it. Without a remote,
+the first write makes a local repo.
+
+The script never fails a run: every store outcome exits 0 with one line on
+stdout for the ticket report. Only wrong usage exits 2. A project opts out with
+a `## Run records` section of `Off.` in docs/agents/ticket-loop.md (the current
+directory's loop config).
+"""
+import json
+import os
+import re
+import subprocess
+import sys
+
+BRANCH = "main"
+CONFIG = os.path.join("docs", "agents", "ticket-loop.md")
+PROJECT = re.compile(r"^[A-Za-z0-9._-]+$")
+DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+RUN_ID = re.compile(r"^[A-Za-z0-9._:-]+$")
+SAFE = "letters, digits, '.', '_' and '-'"
+
+
+def store_path():
+    return os.path.expanduser(os.environ.get("TICKET_LOOP_HOME") or "~/.ticket-loop")
+
+
+def remote():
+    return os.environ.get("TICKET_LOOP_STORE_REMOTE") or None
+
+
+def git(store, *args):
+    try:
+        r = subprocess.run(["git", "-C", store, *args], capture_output=True, text=True,
+                           stdin=subprocess.DEVNULL, timeout=120)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return r.returncode == 0
+
+
+def opted_out(config=CONFIG):
+    try:
+        with open(config) as f:
+            text = f.read()
+    except OSError:
+        return False
+    m = re.search(r"^## Run records[ \t]*\n(.*?)(?=^## |\Z)", text, re.M | re.S)
+    return bool(m) and m.group(1).strip().startswith("Off.")
+
+
+def check(record):
+    """The reason the record is not valid, or None. Checks only the fields the store needs."""
+    if not isinstance(record, dict):
+        return "not a JSON object"
+    for field in ("project", "date", "ticket", "run_id"):
+        if field not in record:
+            return f"{field} is missing"
+    if not isinstance(record["project"], str) or not PROJECT.match(record["project"]) \
+            or record["project"] in (".", ".."):
+        return f"project has characters other than {SAFE}"
+    if not isinstance(record["date"], str) or not DATE.match(record["date"]):
+        return "date is not YYYY-MM-DD"
+    ticket = record["ticket"]
+    if isinstance(ticket, bool) or not (isinstance(ticket, int) or
+                                        (isinstance(ticket, str) and ticket.isdigit())):
+        return "ticket is not a number"
+    if not isinstance(record["run_id"], str) or not RUN_ID.match(record["run_id"]):
+        return f"run_id has characters other than {SAFE} and ':'"
+    return None
+
+
+def record_name(record, followup=False):
+    base = f"{record['date']}-{record['ticket']}-{record['run_id']}"
+    return f"runs/{record['project']}/{base}{'.followup' if followup else ''}.json"
+
+
+def open_store(store, url):
+    """Make the store ready for a write: clone or init it at first write. True if ready."""
+    if not os.path.isdir(os.path.join(store, ".git")):
+        if url and not os.path.exists(store):
+            parent = os.path.dirname(os.path.abspath(store))
+            os.makedirs(parent, exist_ok=True)
+            if not git(parent, "clone", "-q", url, store):
+                return False
+        else:
+            os.makedirs(store, exist_ok=True)
+            if not git(store, "init", "-q", "-b", BRANCH):
+                return False
+    git(store, "symbolic-ref", "HEAD", f"refs/heads/{BRANCH}")
+    if url and not git(store, "remote", "get-url", "origin"):
+        git(store, "remote", "add", "origin", url)
+    return True
+
+
+def sync_push(store):
+    """Pull new records, then push local commits. True if the push went through."""
+    git(store, "pull", "-q", "--rebase", "origin", BRANCH)
+    return git(store, "push", "-q", "origin", f"HEAD:{BRANCH}")
+
+
+def write(path, followup=False):
+    if opted_out():
+        return "run record: not written (off in the loop config)"
+    try:
+        with open(path) as f:
+            record = json.load(f)
+    except (OSError, ValueError):
+        record = None
+    reason = check(record)
+    if reason:
+        return f"run record: not written (record not valid: {reason})"
+    store, url = store_path(), remote()
+    try:
+        if not open_store(store, url):
+            return "run record: not written (store not available)"
+        if url:
+            git(store, "pull", "-q", "--rebase", "origin", BRANCH)
+        name = record_name(record, followup)
+        target = os.path.join(store, name)
+        if followup and not os.path.exists(os.path.join(store, record_name(record))):
+            return f"run record: not written (no record for the followup: {record_name(record)})"
+        if os.path.exists(target):
+            return f"run record: not written (record exists: {name})"
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        with open(target, "x") as f:
+            json.dump(record, f, indent=2, sort_keys=True)
+            f.write("\n")
+        if not (git(store, "add", "--", name) and
+                git(store, "commit", "-q", "-m", f"Add {name}", "--", name)):
+            os.remove(target)
+            return "run record: not written (store not available)"
+    except OSError:
+        return "run record: not written (store not available)"
+    if not url:
+        return f"run record: written ({name}, no remote)"
+    if sync_push(store):
+        return f"run record: written ({name}, pushed)"
+    return (f"run record: written ({name}), push failed: the commit stays local,"
+            " and the next write pushes it")
+
+
+def pull():
+    store, url = store_path(), remote()
+    if not os.path.isdir(os.path.join(store, ".git")):
+        return "run store: not pulled (no store yet)"
+    if not url:
+        return "run store: not pulled (no remote)"
+    if not git(store, "remote", "get-url", "origin"):
+        git(store, "remote", "add", "origin", url)
+    if not git(store, "pull", "-q", "--rebase", "origin", BRANCH):
+        return "run store: not pulled (remote not available)"
+    return "run store: pulled"
+
+
+def main(argv):
+    if argv[:1] == ["pull"] and len(argv) == 1:
+        print(pull())
+        return 0
+    if argv[:1] == ["write"] and len(argv) == 2:
+        print(write(argv[1]))
+        return 0
+    if argv[:2] == ["write", "--followup"] and len(argv) == 3:
+        print(write(argv[2], followup=True))
+        return 0
+    print(__doc__.strip(), file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
