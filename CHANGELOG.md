@@ -4,6 +4,7 @@ What changes for you, the person running the loop, newest first.
 
 ## Unreleased
 
+- A new run store at `~/.ticket-loop/` (or `TICKET_LOOP_HOME`) holds run records for all your projects and machines, as a git repo that syncs through a private remote you name in `TICKET_LOOP_STORE_REMOTE`. The `scripts/ticket-loop-record` script is the one way to write it: it adds one file per record, never changes one, commits and pushes, and never stops a run. A project opts out with a `## Run records` section of `Off.`. Setup shows the allow and deny rules and the `gh repo create --private` command for you to add and run yourself; the allow rule names the versioned plugin path, so add it again after each plugin update. ([#57](https://github.com/jhnhnsn/ticket-loop/issues/57))
 - The loop now claims a ticket before it builds it: it assigns the ticket to you, adds the `in-progress` label and posts a claim comment with a run ID, and the earliest live claim wins. It skips a claimed ticket, names it in the hand-back as `#84: skipped, claimed by another worker (in-progress).`, and says how to free a stale claim. At ship, or at a stop that leaves the ticket not shipped, it removes the label and posts a release comment. Setup creates the label and proves a Claim leg. ([#49](https://github.com/jhnhnsn/ticket-loop/issues/49))
 
 ## 1.21.0
