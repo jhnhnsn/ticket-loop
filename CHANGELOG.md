@@ -2,6 +2,10 @@
 
 What changes for you, the person running the loop, newest first.
 
+## Unreleased
+
+- The loop now claims a ticket before it builds it: it assigns the ticket to you, adds the `in-progress` label and posts a claim comment with a run ID, and the earliest live claim wins. It skips a claimed ticket, names it in the hand-back as `#84: skipped, claimed by another worker (in-progress).`, and says how to free a stale claim. At ship, or at a stop that leaves the ticket not shipped, it removes the label and posts a release comment. Setup creates the label and proves a Claim leg. ([#49](https://github.com/jhnhnsn/ticket-loop/issues/49))
+
 ## 1.21.0
 
 With the status line added, background notices no longer add launcher lines to the chat. A headless run with no Daily cap section stops before it reads or changes anything, and the README's headless cap advice fits the cause. Published on its own, between milestones.
