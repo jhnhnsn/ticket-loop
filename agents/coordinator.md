@@ -93,17 +93,28 @@ An example: `#121 · test queue · running the browser suite · since 14:02 · 0
 
    **Named tickets.** First read the blockers of every named ticket not yet shipped, as the loop config's tracker says. Do this read each time you run this step, including as a fresh coordinator after a handover, and before you choose a ticket or write any brief. A ticket with no blockers is a good read: a zero count or an empty list from a command that succeeded means none. A read that fails is a stop condition (see Stop conditions); an unread ticket is never unblocked.
 
-   The next ticket is then the first one, in the order given, with no open blockers: a named ticket blocked by another named ticket waits for it, and the blocker goes first, wherever it was in the order. A named ticket that isn't ready-for-agent, or is blocked by an open ticket that wasn't named, is skipped with a word on why.
+   The next ticket is then the first one, in the order given, with no open blockers: a named ticket blocked by another named ticket waits for it, and the blocker goes first, wherever it was in the order. A named ticket that isn't ready-for-agent, or is blocked by an open ticket that wasn't named, is skipped with a word on why. So is a named ticket that is **claimed** (below), in a headless run too.
 
-   State the next ticket's number and title, then check the ticket budget (see Ticket budget).
+   **Claimed tickets.** A ticket is claimed when it has the `in-progress` label, or an assignee who isn't the run's user (`gh api user --jq .login` on GitHub). Read both with the config's read command, with `assignees` added to its fields. Skip a claimed ticket, for a parent's frontier and for named tickets, with a word on why: `#84: skipped, claimed by another worker (in-progress).` Claims never expire: a ticket with `in-progress` and no live run stays skipped. Name each claimed ticket you skipped in your next hand-back, whichever kind it is, so the user can remove the label. Claimed tickets are never in the parallel set.
 
-   **Parallel set.** With the budget not reached, and a concurrency mode other than one at a time, work out the parallel set. It is the first tickets up to your brief's concurrency limit, in the run's order, that are open and ready-for-agent with no open blockers. Named runs have those blockers from the read above; a parent's frontier list has them already. Tickets with open blockers never count, so tickets blocked on each other make no set. Fewer than two tickets is no set: build the next ticket alone, and ask nothing. A set is the same set whatever its order. With a set:
+   State the next ticket's number and title, then check the ticket budget (see Ticket budget). With the budget not reached, work out the parallel set below, then claim the ticket, or every ticket of the set, before the first dispatch (see Claim).
+
+   **Parallel set.** With the budget not reached, and a concurrency mode other than one at a time, work out the parallel set. It is the first tickets up to your brief's concurrency limit, in the run's order, that are open, ready-for-agent and not claimed, with no open blockers. Named runs have those blockers from the read above; a parent's frontier list has them already. Tickets with open blockers never count, so tickets blocked on each other make no set. Fewer than two tickets is no set: build the next ticket alone, and ask nothing. A set is the same set whatever its order. With a set:
    - **Parallel worktrees mode:** build the set (see Parallel builds).
    - **Suggest and ask mode, set in the answered sets:** follow that answer, with no hand-back. Accepted: build the set (see Parallel builds). Declined: build the next ticket alone, the set's first.
    - **Suggest and ask mode, new set, SubagentHandback among your tools:** dispatch nothing, and hand back **parallel offer** (see Hand-back). On the resume, add the answer to your answered sets and follow it, as above.
    - **Suggest and ask mode, new set, no SubagentHandback:** never hand back **parallel offer**, since that would end the run. Take decline, and build the next ticket alone. Add this `took decline` line to your next hand-back, whichever kind it is: `Parallel set #82 #84: took decline, since a headless run can't ask.`
 
-   Done when a ticket or a set is chosen, the budget is reached, a parallel offer is handed back, or a stop condition applies: a blockers read failed, or the frontier is empty.
+   **Claim.** Claim a chosen ticket before any dispatch for it, the researcher included. A parallel offer claims nothing: claim the set after the user's answer. The **run ID** is your own label and the claim time in UTC (`date -u +%Y-%m-%dT%H:%MZ`). On GitHub, do these in order, each in its own call:
+   1. Assign the ticket to the run's user and add the label: `gh issue edit <n> --repo <repo> --add-assignee @me --add-label in-progress`. `in-progress` is a literal name in every project, as `research` is.
+   2. Post a claim comment: `Claimed by <your label> (run <claim time>).`, for example `Claimed by ticket-loop: #82 #84 coordinator 1 (run 2026-11-14T15:02Z).`
+   3. Read the ticket's comments again with the config's read command. Find the claim comments that have no later release comment with the same run ID (see Release). The earliest of them wins.
+
+   If the earliest live claim isn't yours, give way: remove nothing, skip the ticket with a word on why, and go on with the frontier. A ticket of a parallel set that another run wins leaves the set; with fewer than two left, build the one left alone. Claim every ticket of a set before its first dispatch.
+
+   A resume after a decision needed or cap reached hand-back keeps the claim: don't claim the ticket again. A budget reached hand-back comes before the claim, so it leaves no ticket claimed.
+
+   Done when a ticket or a set is chosen and claimed, the budget is reached, a parallel offer is handed back, or a stop condition applies: a blockers read failed, or the frontier is empty.
 
 **Labels.** Every subagent you dispatch gets a label (the Agent tool's `description`) that starts with its ticket number, then its role: `#85 research: wall grind`, `#85 implement: wall grind`, `#85 standards review`, `#85 spec review`. That's so the agent list shows which ticket each one is on. No exceptions: a fresh implementer after a failure or for the review fixes gets the same label as the first. Shorten the ticket's title to two or three words to fit; never drop the number to make room. Check the label before every dispatch.
 
@@ -147,6 +158,7 @@ An example: `#121 · test queue · running the browser suite · since 14:02 · 0
    1. Check the daily cap (see Daily cap), before you write the `ship` status. Earlier checks don't count: use grows during the reviews and fixes. Never push without this check.
    2. Add the ticket's entry to the changelog the config names, written as it says for its readers, and commit it.
    3. Push, then publish or deploy as the config says. Confirm the ticket closed.
+   4. Remove the claim label: `gh issue edit <n> --repo <repo> --remove-label in-progress`. Keep the assignee.
 
    Done when sub-step 1's check let you carry on (or Daily cap skips it) and the rest succeeded; a failure is a stop condition.
 
@@ -161,6 +173,10 @@ A hand-back is one of:
 - **cap reached** (see Daily cap): the cap's mode, use and limit (per day: today's use and the cap; rolling: the week's use, the allowance and the day, as `week 20.0%, allowance 28.6% (day 2 of 7)`), or that it can't be read and why, the ticket in hand (number and title, or none) and where it stands, and what's committed locally. Nothing is dispatched or shipped after the check that tripped. The launcher resumes you with the user's answer.
 - **parallel offer** (step 1): the parallel set's tickets, number and title, in order, and the limit. Nothing is dispatched for them. The launcher asks the user the offer question and resumes you with accept or decline. Step 1 says what a headless run does instead.
 - a **stop condition** (which one, and what the user needs to know or do), then what's next.
+
+Every hand-back also names each claimed ticket that step 1 skipped, as `#84: skipped, claimed by another worker (in-progress).`
+
+**Release.** A hand-back that ends the run with a claimed ticket not shipped releases it: a stop condition, a cap stop (stop here, or cap reached in a headless run), or a decision needed in a headless run. For each such ticket, remove the `in-progress` label, keep the assignee, and post a release comment: `Released by <your label> (run <claim time>): <what is committed locally>.` A decision needed or cap reached hand-back that the launcher resumes keeps the claim. In a headless run (no SubagentHandback), no hand-back is resumed, so each one that leaves a claimed ticket not shipped releases it.
 
 Before you hand back, write the `hand-back` step to the status file (see Status file). Whichever it is, add the report from step 6 of each ticket shipped since your last hand-back. That's all the launcher keeps, so leave out the working detail. **Dispatch** above says how to hand back in your session. A hand-back ends your turn of work. If the launcher resumes you with SendMessage, carry on from where you stopped: the run goes on until your next hand-back.
 
@@ -205,11 +221,13 @@ Hand back, saying why, when:
 - the user answers **stop here** to a cap reached hand-back (see Daily cap);
 - anything else the config lists as a stop.
 
+Before a stop condition's hand-back, release each claimed ticket not shipped (see Hand-back, Release).
+
 A ready-for-human ticket next on the frontier isn't a stop by itself: note what it needs for your hand-back, and take the next ready-for-agent ticket if there is one.
 
 ## Parallel builds
 
-When step 1 chooses to build a parallel set (parallel worktrees mode, or a set the user accepted), each ticket's first implementer runs worktree-isolated (the Agent tool's `isolation: "worktree"`). Check the daily cap before each ticket's researcher dispatch, if it has a research pass (see step 2). After any research passes, check the daily cap once for each first implementer, each check its own tool call (see Daily cap). Then dispatch them together, in the mode **Dispatch** above picks; with no SubagentHandback, as parallel foreground calls in one message. Everything after that first build happens on the main checkout, one ticket at a time, through steps 3 to 6 for each. Don't run step 1 again until every ticket of the set has shipped:
+When step 1 chooses to build a parallel set (parallel worktrees mode, or a set the user accepted), each ticket's first implementer runs worktree-isolated (the Agent tool's `isolation: "worktree"`). Claim every ticket of the set first (step 1, Claim). Check the daily cap before each ticket's researcher dispatch, if it has a research pass (see step 2). After any research passes, check the daily cap once for each first implementer, each check its own tool call (see Daily cap). Then dispatch them together, in the mode **Dispatch** above picks; with no SubagentHandback, as parallel foreground calls in one message. Everything after that first build happens on the main checkout, one ticket at a time, through steps 3 to 6 for each. Don't run step 1 again until every ticket of the set has shipped:
 
 - **Never SendMessage a worktree-isolated subagent**, for any reason: a decision's answer, review findings, a test failure. Messaging one pins your own session to its worktree, and git on the main checkout, the test queue and ExitWorktree are then refused (ADR-0001, Consequences).
 - **Worktree to main.** Once a worktree implementer reports (ready to test, or a decision it needs), bring its work onto the main checkout before anything else on that ticket:

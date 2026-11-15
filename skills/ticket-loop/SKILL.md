@@ -15,13 +15,15 @@ The **loop config**, `docs/agents/ticket-loop.md`, says how this project's ticke
 
 **Bash rules.** You follow the coordinator's Bash rules ([`agents/coordinator.md`](../../agents/coordinator.md), Bash rules), in setup too: change files with Edit or Write, one plain command per Bash call with no chains, loops, variables or pipes of any kind, tickets read with the config's read command except the state read below, tokencount run as its skill says. A refused command means rewrite it simpler and try again.
 
-The **state read** is the one exception to the config's read command. Use it to resolve the argument, count the run, draw the Tickets bar and find the offer question's ready tickets (step 1, Progress). It reads only a ticket's state and labels, from the repo or project the config names. For GitHub, it is `gh issue view <n> --repo <repo> --json state,labels`. For another tracker, it is the narrowest read the tracker gives. In a headless run, check the config's Daily cap section first (step 0): with no section, make no state read.
+The **state read** is the one exception to the config's read command. Use it to resolve the argument, count the run, draw the Tickets bar and find the offer question's ready tickets (step 1, Progress). It reads only a ticket's state, labels and assignees, from the repo or project the config names. For GitHub, it is `gh issue view <n> --repo <repo> --json state,labels,assignees`. For another tracker, it is the narrowest read the tracker gives. In a headless run, check the config's Daily cap section first (step 0): with no section, make no state read.
 
 Three more narrow reads go with it. On another tracker, use the narrowest read that gives the same answer. For GitHub:
 
 - **Parent or ticket:** `gh issue view <n> --repo <repo> --json subIssuesSummary`. A `total` above 0 is a parent.
-- **A parent's tickets:** `gh issue list --repo <repo> --state all --limit 500 --search "parent-issue:<repo>#<n>" --json number,state,labels`. For a milestone, use `--milestone "<name>"` in place of `--search`.
+- **A parent's tickets:** `gh issue list --repo <repo> --state all --limit 500 --search "parent-issue:<repo>#<n>" --json number,state,labels,assignees`. For a milestone, use `--milestone "<name>"` in place of `--search`.
 - **No argument:** `gh issue list --repo <repo> --state open --limit 500 --json number,subIssuesSummary`. The oldest parent is the lowest number with a `total` above 0.
+
+A ticket is **claimed** when it has the `in-progress` label, or an assignee who isn't the run's user (`gh api user --jq .login` on GitHub), as the coordinator's step 1 says. Leave claimed tickets out of the ready count and the offer question's parallel set.
 
 Don't read a ticket's body for these jobs. The state read covers the ready tickets only: the blockers read for the offer question is a separate read, as step 1 gives it, and it can read a body on a tracker that keeps blockers there. A read for a user's question or a decision comment uses the config's read command.
 
@@ -115,7 +117,7 @@ Read them before you write anything for the moment they show, and print them:
    - Without AskUserQuestion (a headless run), or if a blockers read fails, ask nothing and answer nothing: the coordinator reads the blockers itself, and step 1 of its definition covers a headless run.
 
    Then count the run for step 2's preview:
-   - **Ready count:** its ready tickets (the open ready-for-agent tickets under the parent, blocked or not, since blockers ship as the run goes; or the named tickets that are open and ready-for-agent; this is the run's size, not the parallel set), then the coordinators they take: the count divided by the ticket budget, rounded up, at least 1. The line opens with the run name exactly as this step gives it: `M1: 7 ready, about 2 coordinators.` for a milestone named `M1`, `#120: 7 ready, about 2 coordinators.` for issue parent #120, `#82: 1 ready, about 1 coordinator.` for a named ticket. The ticket budget is the config's Ticket budget; a config without one uses 4, without asking.
+   - **Ready count:** its ready tickets (the open ready-for-agent tickets under the parent that aren't claimed, blocked or not, since blockers ship as the run goes; or the named tickets that are open, ready-for-agent and not claimed; this is the run's size, not the parallel set), then the coordinators they take: the count divided by the ticket budget, rounded up, at least 1. The line opens with the run name exactly as this step gives it: `M1: 7 ready, about 2 coordinators.` for a milestone named `M1`, `#120: 7 ready, about 2 coordinators.` for issue parent #120, `#82: 1 ready, about 1 coordinator.` for a named ticket. The ticket budget is the config's Ticket budget; a config without one uses 4, without asking.
    - **Progress:** the two progress bars (see Progress above).
    - **Roles:** the roles line (see Roles above).
 

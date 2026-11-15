@@ -1,6 +1,6 @@
 # The closed loop
 
-The loop runs unattended only if every ticket's cycle **closes**: you can take a commit from checked to shipped and recorded with no human in it. A cycle is five **legs**, and running it unattended needs a sixth, **Cap**, so the loop knows when to stop and ask. Each one closes when you can do it alone, from the terminal or an MCP, and read its result as pass or fail.
+The loop runs unattended only if every ticket's cycle **closes**: you can take a commit from checked to shipped and recorded with no human in it. A cycle is five **legs**, and running it unattended needs two more: **Cap**, so the loop knows when to stop and ask, and **Claim**, so two runs never build the same ticket. Each one closes when you can do it alone, from the terminal or an MCP, and read its result as pass or fail.
 
 | Leg | Closes when | The config section |
 | --- | --- | --- |
@@ -10,6 +10,7 @@ The loop runs unattended only if every ticket's cycle **closes**: you can take a
 | **Ship** | one command pushes and publishes or deploys, with no prompt; any secret reaches only that step (envstow's `run --only`, say) | Ship |
 | **Record** | the changelog's file, section and entry format are settled, so an entry is a commit you make | Changelog |
 | **Cap** | tokencount reports, live, how much of the week's plan usage today has taken (`today.percent_of_week`, per day cap) or the week has taken and when it resets (`week.percent_used` and `week.resets_at`, rolling cap) | Daily cap |
+| **Claim** | the tracker has the `in-progress` label, and you can assign a ticket, label it, comment on it, read the comments back and remove the label | Tickets |
 
 A leg can be **not applicable**: a library has no Run or Drive (Check closes its cycle), an unpublished tool has no Ship, and an API key has no plan usage for Cap to read. Record that in the config with the reason, so it isn't mistaken for a gap.
 
@@ -22,6 +23,7 @@ Setup proves each leg by doing it, never by reading about it:
 - **Ship:** run the ship command's dry run if it has one. Without one, confirm each step it runs can go unattended: the remote push works, the secrets are listed in the store (`envstow list`), and nothing prompts. Never publish just to prove the leg.
 - **Record:** the changelog file exists with the settled section.
 - **Cap:** run `tokencount:tokencount`'s `--json` report. Its `usage_source` is `live` and, for a per day cap, `today.percent_of_week` is a number; for a rolling cap, `week.percent_used` is a number and `week.resets_at` a timestamp. Not installed is open and `ready-for-human`.
+- **Claim:** create the `in-progress` label if the tracker lacks it. File a test ticket, and claim it as the coordinator's step 1 says: assign it, add `in-progress` and post a claim comment. Read its comments back and find the claim. Then release it: remove the label and post a release comment. Close the test ticket.
 
 A leg that can't be proven is **open**.
 

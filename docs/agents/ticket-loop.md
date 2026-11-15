@@ -4,7 +4,7 @@ How `/ticket-loop:ticket-loop` finds, builds, tests, ships and records this repo
 
 ## Tickets
 
-GitHub issues in `jhnhnsn/ticket-loop` (see `docs/agents/issue-tracker.md`). A parent is an issue whose sub-issues are its tickets, or a milestone by name. Blocking is GitHub's native issue dependencies. Labels: `ready-for-agent`, `ready-for-human`, and `research` (opts a ticket in to research passes).
+GitHub issues in `jhnhnsn/ticket-loop` (see `docs/agents/issue-tracker.md`). A parent is an issue whose sub-issues are its tickets, or a milestone by name. Blocking is GitHub's native issue dependencies. Labels: `ready-for-agent`, `ready-for-human`, `research` (opts a ticket in to research passes), and `in-progress` (a ticket claimed by a running loop).
 
 Read a ticket: `gh issue view <n> --repo jhnhnsn/ticket-loop --json title,body,labels,comments`, never `--comments`.
 
@@ -27,6 +27,7 @@ A ticket that changes only wording, docs or the changelog gets no sandbox run. C
 - **Read:** the stream-json output (Agent dispatches and their `description` labels, AskUserQuestion calls, the final report), the sandbox tracker (`gh issue view`, comments, closures) and the sandbox's `git log`.
 - **Interactive:** steps that need a question answered (decisions, the daily cap) run in an interactive `claude --plugin-dir ~/github/ticket-loop` session on the test branch in the sandbox, which the user drives from a test plan: AskUserQuestion isn't available headless (proven at setup).
 - **Research label hook:** opt a sandbox dummy ticket in to research with `gh issue edit <n> --repo jhnhnsn/ticket-loop-sandbox --add-label research` (create the label in the sandbox first if it's missing: `gh label create research --repo jhnhnsn/ticket-loop-sandbox`); leave it off a ticket to test the default.
+- **Claim hook:** pre-claim a sandbox dummy ticket with `gh issue edit <n> --repo jhnhnsn/ticket-loop-sandbox --add-label in-progress` (create the label in the sandbox first if it's missing: `gh label create in-progress --repo jhnhnsn/ticket-loop-sandbox`). The run must skip it and name it in the hand-back.
 - **Test plan measures:** labels in the agent list, what reaches the main thread, tracker state, commits, and that the main session stays free.
 - **Clean up after each test:** close its dummy tickets and parent. If a hook wrote the local settings file, remove it too: `rm -f ~/github/ticket-loop-sandbox/.claude/settings.local.json`. Then delete the branch with these commands, each in its own Bash call: `git -C ~/github/ticket-loop-sandbox switch main`, `git -C ~/github/ticket-loop-sandbox branch -D test/<ticket>-<short name>`, then `git -C ~/github/ticket-loop-sandbox push origin --delete test/<ticket>-<short name>`. A test's commits and config changes go with the branch. Last, run `git -C ~/github/ticket-loop-sandbox ls-remote origin main` again, and check that it prints the commit that the Test branch step recorded.
 

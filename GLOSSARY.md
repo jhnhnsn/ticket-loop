@@ -32,7 +32,10 @@ This project's own terms. With a `## Writing` section of `ASD-STE100`, they are 
 - **parallel offer:** the hand-back that gives the launcher a new parallel set to ask about.
 - **offer question:** the launcher's question to the user to accept or decline a parallel set.
 - **answered set:** a parallel set that the user accepted or declined in a run; each brief lists them.
-- **state read:** the launcher's read of only a ticket's state and labels, to count a run and draw the Tickets bar.
+- **state read:** the launcher's read of only a ticket's state, labels and assignees, to count a run and draw the Tickets bar.
+- **claim:** the `in-progress` label, the assignee and the claim comment that mark a ticket as taken by one run.
+- **run ID:** the coordinator's agent label and the claim time, in a claim comment or a release comment.
+- **claimed ticket:** a ticket with the `in-progress` label, or an assignee who is not the run's user.
 - **brief:** the prompt an agent gives a subagent it starts.
 - **report:** what a subagent returns.
 - **ticket report:** the few lines a coordinator writes per shipped ticket.
@@ -116,6 +119,8 @@ This project's own terms. With a `## Writing` section of `ASD-STE100`, they are 
 - **triage:** sort a new ticket and give it a label.
 - **label:** put a label on a ticket, or an agent label on a subagent.
 - **close:** mark an issue as done.
+- **claim:** put a claim on a ticket before the first dispatch for it.
+- **release:** remove the `in-progress` label from a ticket that did not ship, with a release comment.
 - **file:** create a ticket in the tracker.
 - **review:** check a commit against standards or the spec.
 - **test:** run a test plan and compare the results with the expected results.
