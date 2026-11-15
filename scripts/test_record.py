@@ -197,7 +197,7 @@ class Store(unittest.TestCase):
         self.assertEqual(r.stdout.strip(), "run store: not pulled (remote not available)")
 
     def test_due_lists_old_records_with_no_followup(self):
-        old = dict(RECORD, date="2020-01-01")
+        old = dict(RECORD, date="2020-01-01", commits=["abc123"])
         self.run_script("write", self.record_file(old))
         self.run_script("write", self.record_file(dict(old, run_id="r2")))
         self.run_script("write", "--followup", self.record_file(dict(old, run_id="r2")))
@@ -206,7 +206,27 @@ class Store(unittest.TestCase):
         self.run_script("write", self.record_file(dict(RECORD, date=today)))
         r = self.run_script("due", "demo")
         self.assertEqual(r.returncode, 0)
-        self.assertEqual(r.stdout.strip(), "runs/demo/2020-01-01-57-r1.json")
+        lines = r.stdout.strip().splitlines()
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(json.loads(lines[0]), old)
+
+    def test_due_skips_a_record_that_is_not_json(self):
+        old = dict(RECORD, date="2020-01-01")
+        self.run_script("write", self.record_file(old))
+        folder = os.path.join(self.home, "runs", "demo")
+        with open(os.path.join(folder, "2020-01-02-58-r1.json"), "w") as f:
+            f.write("{nope")
+        r = self.run_script("due", "demo")
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual([json.loads(n) for n in r.stdout.strip().splitlines()], [old])
+
+    def test_due_with_only_bad_records_is_none_due(self):
+        self.run_script("write", self.record_file(dict(RECORD, date="2020-01-01")))
+        folder = os.path.join(self.home, "runs", "demo")
+        with open(os.path.join(folder, "2020-01-01-57-r1.json"), "w") as f:
+            f.write("[1]")
+        self.assertEqual(self.run_script("due", "demo").stdout.strip(),
+                         "run store: no records due")
 
     def test_due_at_exactly_14_days_waits(self):
         day = (datetime.date.today() - datetime.timedelta(days=14)).isoformat()

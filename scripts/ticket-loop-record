@@ -4,8 +4,9 @@
   ticket-loop-record write <record.json>             add a record to the store
   ticket-loop-record write --followup <record.json>  add <record>.followup.json next to it
   ticket-loop-record pull                            pull the store from its remote
-  ticket-loop-record due <project>                   list the project's records older
-                                                     than 14 days with no followup
+  ticket-loop-record due <project>                   print the project's records older
+                                                     than 14 days with no followup,
+                                                     one compact JSON record per line
 
 The store is a git repo at $TICKET_LOOP_HOME (default ~/.ticket-loop/). Each
 record is one file, runs/<project>/<date>-<ticket>-<run ID>.json, and never
@@ -170,7 +171,8 @@ def pull():
 
 
 def due(project, today=None):
-    """The project's records older than FOLLOWUP_DAYS with no followup, one per line."""
+    """The project's records older than FOLLOWUP_DAYS with no followup, one per line
+    as compact JSON. A record file that is not a JSON object is skipped."""
     store = store_path()
     folder = os.path.join(store, "runs", project)
     if not os.path.isdir(os.path.join(store, ".git")):
@@ -187,7 +189,13 @@ def due(project, today=None):
             continue
         if (today - day).days > FOLLOWUP_DAYS and \
                 n[:-len(".json")] + ".followup.json" not in names:
-            found.append(f"runs/{project}/{n}")
+            try:
+                with open(os.path.join(folder, n)) as f:
+                    record = json.load(f)
+            except (OSError, ValueError):
+                continue
+            if isinstance(record, dict):
+                found.append(json.dumps(record, sort_keys=True, separators=(",", ":")))
     return "\n".join(found) or "run store: no records due"
 
 
