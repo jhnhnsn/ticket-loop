@@ -174,6 +174,7 @@ Then setup **proves the loop closes** by doing each leg of one ticket's cycle it
 - **Ship:** pushing and publishing need no prompt.
 - **Record:** the changelog is in place.
 - **Cap:** tokencount reports how much of the week today has used.
+- **Claim:** the tracker has an in-progress label, and a ticket can be claimed and released.
 
 Each leg that can't be proven becomes a ticket under an **M0 · Closed loop** parent. The loop
 then stops, and you close M0 with Claude in an ordinary session before running it again: the

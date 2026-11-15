@@ -95,7 +95,7 @@ An example: `#121 · test queue · running the browser suite · since 14:02 · 0
 
    The next ticket is then the first one, in the order given, with no open blockers: a named ticket blocked by another named ticket waits for it, and the blocker goes first, wherever it was in the order. A named ticket that isn't ready-for-agent, or is blocked by an open ticket that wasn't named, is skipped with a word on why. So is a named ticket that is **claimed** (below), in a headless run too.
 
-   **Claimed tickets.** A ticket is claimed when it has the `in-progress` label, or an assignee who isn't the run's user (`gh api user --jq .login` on GitHub). Read both with the config's read command, with `assignees` added to its fields. Skip a claimed ticket, for a parent's frontier and for named tickets, with a word on why: `#84: skipped, claimed by another worker (in-progress).` Claims never expire: a ticket with `in-progress` and no live run stays skipped. Name each claimed ticket you skipped in your next hand-back, whichever kind it is, so the user can remove the label. Claimed tickets are never in the parallel set.
+   **Claimed tickets.** A ticket is claimed when it has the `in-progress` label, or an assignee who isn't the run's user (`gh api user --jq .login` on GitHub). Read both with the config's read command, with `assignees` added to its fields. Skip a claimed ticket, for a parent's frontier and for named tickets, with a word on why: `#84: skipped, claimed by another worker (in-progress).` Claims never expire: a ticket with `in-progress` and no live run stays skipped. Name each claimed ticket you skipped in your next hand-back, so the user can free a stale claim (see Hand-back). Claimed tickets are never in the parallel set.
 
    State the next ticket's number and title, then check the ticket budget (see Ticket budget). With the budget not reached, work out the parallel set below, then claim the ticket, or every ticket of the set, before the first dispatch (see Claim).
 
@@ -105,12 +105,17 @@ An example: `#121 · test queue · running the browser suite · since 14:02 · 0
    - **Suggest and ask mode, new set, SubagentHandback among your tools:** dispatch nothing, and hand back **parallel offer** (see Hand-back). On the resume, add the answer to your answered sets and follow it, as above.
    - **Suggest and ask mode, new set, no SubagentHandback:** never hand back **parallel offer**, since that would end the run. Take decline, and build the next ticket alone. Add this `took decline` line to your next hand-back, whichever kind it is: `Parallel set #82 #84: took decline, since a headless run can't ask.`
 
-   **Claim.** Claim a chosen ticket before any dispatch for it, the researcher included. A parallel offer claims nothing: claim the set after the user's answer. The **run ID** is your own label and the claim time in UTC (`date -u +%Y-%m-%dT%H:%MZ`). On GitHub, do these in order, each in its own call:
+   **Claim.** Claim a chosen ticket before any dispatch for it, the researcher included. A parallel offer claims nothing: claim the set after the user's answer. The **run ID** is your own agent label and the claim time in UTC (`date -u +%Y-%m-%dT%H:%MZ`). Your agent label is the one the launcher's dispatch gave you: `ticket-loop: <the run's name> coordinator <n>`, with the run's name and coordinator count from your brief, for example `ticket-loop: #167 coordinator 1`. Never put the claimed ticket's number in its place, and never drop the count. Every claim and release comment for a ticket in this run uses the same run ID: the claim time is the time of its claim comment. On GitHub, do these in order, each in its own call:
    1. Assign the ticket to the run's user and add the label: `gh issue edit <n> --repo <repo> --add-assignee @me --add-label in-progress`. `in-progress` is a literal name in every project, as `research` is.
-   2. Post a claim comment: `Claimed by <your label> (run <claim time>).`, for example `Claimed by ticket-loop: #82 #84 coordinator 1 (run 2026-11-14T15:02Z).`
+   2. Post a claim comment: `Claimed by <your agent label> (run <claim time>).`, for example `Claimed by ticket-loop: #82 #84 coordinator 1 (run 2026-11-14T15:02Z).`
    3. Read the ticket's comments again with the config's read command. Find the claim comments that have no later release comment with the same run ID (see Release). The earliest of them wins.
 
-   If the earliest live claim isn't yours, give way: remove nothing, skip the ticket with a word on why, and go on with the frontier. A ticket of a parallel set that another run wins leaves the set; with fewer than two left, build the one left alone. Claim every ticket of a set before its first dispatch.
+   On another tracker, use its assign, label and comment commands, as the config's tracker says.
+
+   If the earliest live claim isn't yours, give way:
+   - Post a release comment for your own claim (see Release). Remove no label and no assignee.
+   - Skip the ticket, and say why in a word.
+   - Go on with the frontier. A ticket of a parallel set that another run wins leaves the set; with fewer than two left, build the one left alone. Claim every ticket of a set before its first dispatch.
 
    A resume after a decision needed or cap reached hand-back keeps the claim: don't claim the ticket again. A budget reached hand-back comes before the claim, so it leaves no ticket claimed.
 
@@ -158,7 +163,7 @@ An example: `#121 · test queue · running the browser suite · since 14:02 · 0
    1. Check the daily cap (see Daily cap), before you write the `ship` status. Earlier checks don't count: use grows during the reviews and fixes. Never push without this check.
    2. Add the ticket's entry to the changelog the config names, written as it says for its readers, and commit it.
    3. Push, then publish or deploy as the config says. Confirm the ticket closed.
-   4. Remove the claim label: `gh issue edit <n> --repo <repo> --remove-label in-progress`. Keep the assignee.
+   4. Remove the claim label: `gh issue edit <n> --repo <repo> --remove-label in-progress`. Keep the assignee. Then post a release comment (see Release): `Released by <your agent label> (run <claim time>): shipped.`
 
    Done when sub-step 1's check let you carry on (or Daily cap skips it) and the rest succeeded; a failure is a stop condition.
 
@@ -169,14 +174,19 @@ An example: `#121 · test queue · running the browser suite · since 14:02 · 0
 A hand-back is one of:
 
 - **decision needed** (step 3): the ticket, the options, your recommendation, whether the implementer did real work, and what's committed or left in the tree. The launcher resumes you with the answer.
-- **budget reached** (see Ticket budget): the next ticket, number and title, any named tickets skipped and why (step 1), and what any ready-for-human ticket needs (Stop conditions). With the reports and any `took decline` line (step 1), that's all it carries: the launcher starts a fresh coordinator, which reads the rest from the tracker.
+- **budget reached** (see Ticket budget): the next ticket, number and title, any named tickets skipped and why (step 1), and what any ready-for-human ticket needs (Stop conditions). With the reports, any `took decline` line and any claimed-ticket skip lines with their note (step 1), that's all it carries: the launcher starts a fresh coordinator, which reads the rest from the tracker.
 - **cap reached** (see Daily cap): the cap's mode, use and limit (per day: today's use and the cap; rolling: the week's use, the allowance and the day, as `week 20.0%, allowance 28.6% (day 2 of 7)`), or that it can't be read and why, the ticket in hand (number and title, or none) and where it stands, and what's committed locally. Nothing is dispatched or shipped after the check that tripped. The launcher resumes you with the user's answer.
 - **parallel offer** (step 1): the parallel set's tickets, number and title, in order, and the limit. Nothing is dispatched for them. The launcher asks the user the offer question and resumes you with accept or decline. Step 1 says what a headless run does instead.
 - a **stop condition** (which one, and what the user needs to know or do), then what's next.
 
-Every hand-back also names each claimed ticket that step 1 skipped, as `#84: skipped, claimed by another worker (in-progress).`
+Every hand-back also names each claimed ticket that step 1 skipped, as `#84: skipped, claimed by another worker (in-progress).` Under those lines, add this note once: `If no other worker runs on a skipped ticket, its claim is stale. To free it, remove the in-progress label and post a release comment with that claim's run ID.`
 
-**Release.** A hand-back that ends the run with a claimed ticket not shipped releases it: a stop condition, a cap stop (stop here, or cap reached in a headless run), or a decision needed in a headless run. For each such ticket, remove the `in-progress` label, keep the assignee, and post a release comment: `Released by <your label> (run <claim time>): <what is committed locally>.` A decision needed or cap reached hand-back that the launcher resumes keeps the claim. In a headless run (no SubagentHandback), no hand-back is resumed, so each one that leaves a claimed ticket not shipped releases it.
+**Release.** A claim stays live until a release comment with its run ID follows it. Ship and a give-way post one (steps 5 and 1). A hand-back that ends the run with a claimed ticket not shipped also releases it. These hand-backs end the run:
+- a stop condition;
+- a cap stop: stop here, or cap reached in a headless run;
+- a decision needed in a headless run.
+
+For each such ticket, remove the `in-progress` label, keep the assignee, and post a release comment: `Released by <your agent label> (run <claim time>): <what is committed locally>.` A decision needed or cap reached hand-back that the launcher resumes keeps the claim. A headless run (no SubagentHandback) resumes no hand-back, so each hand-back that leaves a claimed ticket not shipped releases it.
 
 Before you hand back, write the `hand-back` step to the status file (see Status file). Whichever it is, add the report from step 6 of each ticket shipped since your last hand-back. That's all the launcher keeps, so leave out the working detail. **Dispatch** above says how to hand back in your session. A hand-back ends your turn of work. If the launcher resumes you with SendMessage, carry on from where you stopped: the run goes on until your next hand-back.
 
@@ -202,7 +212,7 @@ The **verdict** compares the two:
 
 - **Under the limit** (use < limit): carry on.
 - **At or over the limit, or unreadable** (tokencount isn't installed or isn't available, its `usage_source` is `unavailable`, or the mode's fields are null: `today.percent_of_week` per day; `week.percent_used` or `week.resets_at` rolling): dispatch nothing and ship nothing. Hand back **cap reached** (see Hand-back). The launcher asks the user and resumes you with the answer:
-  - **Stop here:** dispatch and ship nothing more. Leave the ticket in hand as it is, and hand back a stop condition saying what's committed locally and not pushed, and what's left in the tree; a later run picks it up.
+  - **Stop here:** dispatch and ship nothing more. Leave the work on the ticket in hand as it is, release its claim (see Hand-back, Release), and hand back a stop condition saying what's committed locally and not pushed, and what's left in the tree; a later run picks it up.
   - **Finish this ticket or one more:** carry on without the check until one more ticket ships: the ticket in hand, or, with none in hand, the next one. Then the check applies again, and at or over the limit you hand back **cap reached** again.
   - **Keep going today:** skip the check for the rest of that day: while today's local date (`date +%F`) is the date the launcher recorded with the answer, in its message or your brief. From the next date on, check again. A brief that says the user chose to keep going today means the same: skip the check that day, without handing back for it. This holds in both modes: keep going today follows the local date, not the rolling cap's 24-hour days.
 

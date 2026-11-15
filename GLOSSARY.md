@@ -34,7 +34,7 @@ This project's own terms. With a `## Writing` section of `ASD-STE100`, they are 
 - **answered set:** a parallel set that the user accepted or declined in a run; each brief lists them.
 - **state read:** the launcher's read of only a ticket's state, labels and assignees, to count a run and draw the Tickets bar.
 - **claim:** the `in-progress` label, the assignee and the claim comment that mark a ticket as taken by one run.
-- **run ID:** the coordinator's agent label and the claim time, in a claim comment or a release comment.
+- **run ID:** the coordinator's own agent label and the claim time, in a claim comment or a release comment.
 - **claimed ticket:** a ticket with the `in-progress` label, or an assignee who is not the run's user.
 - **brief:** the prompt an agent gives a subagent it starts.
 - **report:** what a subagent returns.
