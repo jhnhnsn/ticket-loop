@@ -1,0 +1,660 @@
+#!/usr/bin/env python3
+"""The ticket-loop sandbox regression suite: a controlled comparison of two plugin versions.
+
+  ticket-loop-regression compare --baseline <ref> [--candidate <ref|path>] [--target <scenario>]...
+                                 [--repeats 5] [--only <scenario>]...
+  ticket-loop-regression list    the visible and held-out scenarios it finds
+  ticket-loop-regression grade <scenario.json> <observation.json>
+                                 grade one saved run, print the verdict as JSON
+
+It runs each scenario headless in the sandbox, on each version, some times, grades each run
+with no LLM (stream-json, the sandbox tracker, git log), and writes one result file for the
+comparison. See regression/README.md.
+
+Environment:
+  TICKET_LOOP_HOME          the run store (default ~/.ticket-loop); results go to
+                            runs/_sandbox/regression/ in it
+  TICKET_LOOP_HOLDOUT       the held-out scenario clone (default ~/.ticket-loop-holdout)
+  TICKET_LOOP_SANDBOX       the sandbox clone (default ~/github/ticket-loop-sandbox)
+  TICKET_LOOP_USAGE_JSON    a saved tokencount --json report to use instead of tokencount
+  TICKET_LOOP_TOKENCOUNT    path to the tokencount script
+  CLAUDE_CONFIG_DIR         where tokencount keeps its guard (default ~/.claude)
+"""
+import glob
+import hashlib
+import json
+import math
+import os
+import re
+import subprocess
+import sys
+import tempfile
+from datetime import datetime, timedelta, timezone
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+SANDBOX_REPO = "jhnhnsn/ticket-loop-sandbox"
+DEFAULT_REPEATS = 5
+
+
+# ------------------------------------------------------------------- stream-json
+
+def parse_stream(text):
+    """The facts a grader reads from one headless run's stream-json output."""
+    models, dispatches, refusals, report, cost = set(), [], [], None, None
+    for line in (text or "").splitlines():
+        try:
+            ev = json.loads(line)
+        except ValueError:
+            continue
+        if not isinstance(ev, dict):
+            continue
+        kind = ev.get("type")
+        if kind == "system" and ev.get("model"):
+            models.add(ev["model"])
+        msg = ev.get("message") or {}
+        if kind == "assistant" and msg.get("model"):
+            models.add(msg["model"])
+        for part in msg.get("content") or [] if isinstance(msg.get("content"), list) else []:
+            if not isinstance(part, dict):
+                continue
+            if part.get("type") == "tool_use" and part.get("name") in ("Agent", "Task"):
+                inp = part.get("input") or {}
+                dispatches.append({"description": inp.get("description") or "",
+                                   "subagent_type": inp.get("subagent_type") or "",
+                                   "model": inp.get("model"), "effort": inp.get("effort")})
+            if part.get("type") == "tool_result" and part.get("is_error"):
+                body = part.get("content")
+                if isinstance(body, list):
+                    body = " ".join(str(b.get("text", "")) for b in body if isinstance(b, dict))
+                body = str(body or "")
+                if re.search(r"denied|not allowed|permission", body, re.I):
+                    refusals.append(body)
+        if kind == "result":
+            report = ev.get("result")
+            cost = ev.get("total_cost_usd")
+            models.update((ev.get("modelUsage") or {}).keys())
+    return {"models": sorted(models), "dispatches": dispatches, "refusals": refusals,
+            "report": report, "cost_usd": cost}
+
+
+# ----------------------------------------------------------------------- grading
+
+def _fill(pattern, tickets):
+    return re.sub(r"\{(\w+)\}", lambda m: "#%d" % tickets[m.group(1)]["number"]
+                  if m.group(1) in tickets else m.group(0), pattern)
+
+
+def _ticket(obs, key):
+    t = obs["tickets"].get(key)
+    if t is None:
+        raise ValueError("no ticket %r in the scenario" % key)
+    return t
+
+
+def _closes(commits, number):
+    pat = re.compile(r"\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\s+#%d\b" % number, re.I)
+    return any(pat.search(c) for c in commits)
+
+
+def _count(n, check):
+    hi = check.get("max")
+    lo = check.get("min", 0 if hi is not None else 1)
+    return n >= lo and (hi is None or n <= hi)
+
+
+def _one(check, obs):
+    kind, s, tickets = check.get("check"), obs["stream"], obs["tickets"]
+    if kind == "ticket_state":
+        t = _ticket(obs, check["ticket"])
+        ok = t["state"] == check["state"]
+        return ok, "#%d is %s, wants %s" % (t["number"], t["state"], check["state"])
+    if kind == "ticket_label":
+        t = _ticket(obs, check["ticket"])
+        has = check["label"] in t.get("labels", [])
+        want = check.get("present", True)
+        return has == want, "#%d label %s %s" % (t["number"], check["label"],
+                                                 "present" if has else "absent")
+    if kind in ("commit_closes", "no_commit_closes"):
+        t = _ticket(obs, check["ticket"])
+        found = _closes(obs["commits"], t["number"])
+        ok = found if kind == "commit_closes" else not found
+        return ok, "a commit closes #%d: %s" % (t["number"], "yes" if found else "no")
+    if kind == "report_matches":
+        pat = _fill(check["pattern"], tickets)
+        if s["report"] is None:
+            return False, "no final report"
+        found = re.search(pat, s["report"], re.I | re.S) is not None
+        want = check.get("present", True)
+        return found == want, "report %s /%s/" % ("matches" if found else "lacks", pat)
+    if kind == "dispatched":
+        pat = re.compile(_fill(check["pattern"], tickets), re.I)
+        field = check.get("field", "description")
+        n = sum(1 for d in s["dispatches"] if pat.search(d.get(field) or ""))
+        return _count(n, check), "%d dispatches match /%s/" % (n, pat.pattern)
+    if kind == "refused":
+        n = len(s["refusals"])
+        return _count(n, check), "%d refused tool calls" % n
+    if kind == "main_unchanged":
+        return not obs["main_moved"], "sandbox main %s" % ("moved" if obs["main_moved"] else "unchanged")
+    raise ValueError("unknown check %r" % kind)
+
+
+CHECKS = ("ticket_state", "ticket_label", "commit_closes", "no_commit_closes",
+          "report_matches", "dispatched", "refused", "main_unchanged")
+
+
+def grade(checks, obs):
+    """A run's verdict: it passes only when every check holds."""
+    out = []
+    for c in checks:
+        ok, detail = _one(c, obs)
+        out.append({"check": c["check"], "pass": bool(ok), "detail": detail})
+    return {"pass": all(c["pass"] for c in out), "checks": out}
+
+
+# --------------------------------------------------------------------- pass rule
+
+def noise(b, c):
+    """The noise between repeats for one scenario: the standard error of the difference of
+    the two pass rates, and never less than one run's share, the smallest step a rate takes."""
+    nb, nc = b["runs"], c["runs"]
+    pb, pc = b["passes"] / nb, c["passes"] / nc
+    se = math.sqrt(pb * (1 - pb) / nb + pc * (1 - pc) / nc)
+    return max(se, 1.0 / min(nb, nc))
+
+
+def judge(baseline, candidate, targets, holdout):
+    """The comparison's verdict: pass, fail or incomplete, with the reasons.
+
+    A change passes only if each target's pass rate goes up and no other scenario's rate
+    goes down by more than the noise. A held-out scenario that gets worse fails the change;
+    when a visible target also improved, the reason says overfitting.
+    """
+    scen, held, reasons, incomplete = {}, {}, [], []
+    for name in sorted(set(baseline) | set(candidate)):
+        b = baseline.get(name) or {"passes": 0, "runs": 0}
+        c = candidate.get(name) or {"passes": 0, "runs": 0}
+        row = {"baseline": "%d/%d" % (b["passes"], b["runs"]),
+               "candidate": "%d/%d" % (c["passes"], c["runs"]),
+               "target": name in targets}
+        (held if name in holdout else scen)[name] = row
+        if not b["runs"] or not c["runs"]:
+            incomplete.append(name)
+            continue
+        pb, pc = b["passes"] / b["runs"], c["passes"] / c["runs"]
+        row.update(baseline_rate=round(pb, 3), candidate_rate=round(pc, 3),
+                   noise=round(noise(b, c), 3))
+        row["worse"] = pb - pc > row["noise"] + 1e-9
+        row["improved"] = pc > pb
+    improved = [t for t in targets if t in scen and scen[t].get("improved")]
+    for t in targets:
+        if t in scen and "improved" in scen[t] and not scen[t]["improved"]:
+            reasons.append("%s: target did not improve" % t)
+    for name, row in scen.items():
+        if row.get("worse") and name not in targets:
+            reasons.append("%s: worse by more than the noise" % name)
+    for name, row in held.items():
+        if row.get("worse"):
+            reasons.append("overfitting: held-out %s worse while the visible target improved" % name
+                           if improved else "held-out %s: worse by more than the noise" % name)
+    if reasons:
+        verdict = "fail"
+    elif incomplete:
+        verdict = "incomplete"
+        reasons = ["%s: not run on both versions" % n for n in incomplete]
+    else:
+        verdict = "pass"
+    return {"verdict": verdict, "reasons": reasons, "scenarios": scen, "holdout": held}
+
+
+# ---------------------------------------------------------------------- the cap
+
+def parse_time(text):
+    try:
+        t = datetime.fromisoformat(str(text).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    return t if t.tzinfo else t.replace(tzinfo=timezone.utc)
+
+
+def cap_text(config):
+    m = re.search(r"^## Daily cap\s*\n(.*?)(?=^## |\Z)", config or "", re.S | re.M)
+    return m.group(1).strip() if m else None
+
+
+def guard_armed(guard, now):
+    """True for a tokencount rolling guard that is set, not expired and not paused."""
+    if not guard or guard.get("rolling_daily") is None:
+        return False
+    resets, paused = parse_time(guard.get("window_resets_at")), parse_time(guard.get("paused_until"))
+    if resets is not None and now >= resets:
+        return False
+    return paused is None or now >= paused
+
+
+def cap_check(report, cap, guard, now):
+    """Before each scenario run: may the suite start it, and how much of the cap is left.
+
+    left is in percent of the plan's weekly usage, or None when the loop has no cap.
+    """
+    if not guard_armed(guard, now):
+        return {"ok": False, "left": None,
+                "reason": "the tokencount rolling guard is not armed: arm it first"}
+    if cap and cap.lower().startswith("not applicable"):
+        return {"ok": True, "left": None, "reason": "no Daily cap"}
+    if not report or report.get("usage_source") == "unavailable":
+        return {"ok": False, "left": None, "reason": "the Daily cap is unreadable"}
+    m = re.search(r"([\d.]+)%", cap or "")
+    share = float(m.group(1)) if m else 100 / 7
+    week = report.get("week") or {}
+    if (cap or "").startswith("Rolling:"):
+        use, resets = week.get("percent_used"), parse_time(week.get("resets_at"))
+        if use is None or resets is None:
+            return {"ok": False, "left": None, "reason": "the Daily cap is unreadable"}
+        day = max(1, min(7, int((now - (resets - timedelta(days=7))).total_seconds() // 86400) + 1))
+        limit = min(100.0, share * day)
+    else:
+        use = (report.get("today") or {}).get("percent_of_week")
+        if use is None:
+            return {"ok": False, "left": None, "reason": "the Daily cap is unreadable"}
+        limit = share
+    left = round(limit - use, 3)
+    if left <= 0:
+        return {"ok": False, "left": left,
+                "reason": "Daily cap reached: %.1f%% used of %.1f%%" % (use, limit)}
+    return {"ok": True, "left": left, "reason": "%.1f%% of the cap left" % left}
+
+
+def plan_repeats(left, per_run, runs_per_round, wanted):
+    """How many repeat rounds the cap left allows, at most the wanted number."""
+    if left is None or not per_run:
+        return wanted
+    return max(0, min(wanted, int(left // (per_run * runs_per_round))))
+
+
+# -------------------------------------------------------------------- scenarios
+
+def holdout_id(name):
+    """The name a held-out scenario has in a result file, so the file shows nothing of it."""
+    return "holdout-" + hashlib.sha256(name.encode()).hexdigest()[:8]
+
+
+def load_scenarios(visible_dir, holdout_root):
+    """The visible scenarios in this repo, then the held-out ones in their private clone."""
+    out = []
+    for folder, held in ((visible_dir, False), (os.path.join(holdout_root, "scenarios"), True)):
+        for path in sorted(glob.glob(os.path.join(folder, "*.json"))):
+            with open(path) as fh:
+                s = json.load(fh)
+            s["holdout"] = held
+            out.append(s)
+    return out
+
+
+# ------------------------------------------------------------------- comparison
+
+VERSIONS = ("baseline", "candidate")
+DEFAULT_RUN_SHARE = 0.5   # % of the weekly usage one Sonnet scenario run takes, until measured
+
+
+def run_comparison(scenarios, repeats, targets, run_one, check_cap, conditions):
+    """Run every scenario on both versions, round by round, and judge the result.
+
+    run_one(scenario, version) returns a run's grade with its models and usage (% of the week).
+    check_cap() runs before each scenario run. A stop ends the comparison at once, with what
+    finished; little cap left lowers the number of rounds, and the notes say so.
+    """
+    tally = {v: {} for v in VERSIONS}
+    models = {v: set() for v in VERSIONS}
+    runs, used, notes, stopped = [], [], [], None
+    total, done = repeats, 0
+    per_round = 2 * len(scenarios)
+
+    def label(s):
+        return holdout_id(s["name"]) if s["holdout"] else s["name"]
+
+    while done < total and stopped is None:
+        cap = check_cap()
+        if not cap["ok"]:
+            stopped = cap["reason"]
+            break
+        per_run = sum(used) / len(used) if used else DEFAULT_RUN_SHARE
+        allowed = done + plan_repeats(cap.get("left"), per_run, per_round, total - done)
+        if allowed < total:
+            total = allowed
+            notes.append("repeats reduced to %d: little Daily cap left (%.1f%%)"
+                         % (total, cap["left"]))
+            if done >= total:
+                break
+        first = True
+        for s in scenarios:
+            for v in VERSIONS:
+                if not first:
+                    cap = check_cap()
+                    if not cap["ok"]:
+                        stopped = cap["reason"]
+                        break
+                first = False
+                g = run_one(s, v)
+                name = label(s)
+                t = tally[v].setdefault(name, {"passes": 0, "runs": 0})
+                t["runs"] += 1
+                t["passes"] += 1 if g["pass"] else 0
+                models[v].update(g.get("models") or [])
+                if g.get("usage") is not None:
+                    used.append(g["usage"])
+                row = {"scenario": name, "version": v, "round": done + 1, "pass": g["pass"],
+                       "cost_usd": g.get("cost_usd")}
+                if not s["holdout"]:
+                    row["checks"] = g.get("checks")
+                runs.append(row)
+            if stopped:
+                break
+        if stopped is None:
+            done += 1
+    held = [holdout_id(s["name"]) for s in scenarios if s["holdout"]]
+    j = judge(tally["baseline"], tally["candidate"], targets, held)
+    if models["baseline"] != models["candidate"]:
+        j["verdict"] = "invalid"
+        j["reasons"] = ["the versions ran on different models (%s; %s): run the baseline again"
+                        % (", ".join(sorted(models["baseline"])),
+                           ", ".join(sorted(models["candidate"])))]
+    elif stopped and j["verdict"] == "pass":
+        j["verdict"] = "incomplete"
+        j["reasons"] = ["stopped: " + stopped]
+    cond = dict(conditions)
+    cond["models"] = {v: sorted(models[v]) for v in VERSIONS}
+    cond["scenarios"] = [label(s) for s in scenarios]
+    return dict(j, conditions=cond, targets=list(targets), stopped=stopped, notes=notes,
+                repeats={"wanted": repeats, "done": done}, runs=runs)
+
+
+def set_sections(config, sections):
+    """The loop config with each named `## ` section's text replaced, or added at the end."""
+    for title, text in sections.items():
+        pat = re.compile(r"(^## %s\s*\n)(.*?)(?=^## |\Z)" % re.escape(title), re.S | re.M)
+        body = "\n%s\n\n" % text.strip()
+        if pat.search(config):
+            config = pat.sub(lambda m: m.group(1) + body, config, count=1)
+        else:
+            config = config.rstrip("\n") + "\n\n## %s\n%s" % (title, body)
+    return config.rstrip("\n") + "\n"
+
+
+def fill_args(args, tickets, parent):
+    return re.sub(r"\{(\w+)\}", lambda m: "#%d" % (parent if m.group(1) == "parent"
+                                                   else tickets[m.group(1)]["number"]), args)
+
+
+# ------------------------------------------------------------ real sandbox runs
+
+def _cmd(argv, cwd=None, check=True, **kw):
+    p = subprocess.run(argv, cwd=cwd, capture_output=True, text=True, **kw)
+    if check and p.returncode != 0:
+        raise RuntimeError("%s failed: %s" % (" ".join(argv[:4]), p.stderr.strip()[:300]))
+    return p.stdout.strip()
+
+
+def _issue_number(url):
+    return int(url.rstrip("/").rsplit("/", 1)[1])
+
+
+class Sandbox:
+    """One scenario run in the sandbox clone: set up, run headless, observe, clean up.
+
+    Every step is the Test queue's: a test branch from main, dummy tickets under a fresh
+    parent, the clean-up after, and a check that the sandbox's main did not move.
+    """
+
+    def __init__(self, path, work, repo=SANDBOX_REPO):
+        self.path, self.work, self.repo = path, work, repo
+        self.count = 0
+
+    def git(self, *a, check=True):
+        return _cmd(["git", "-C", self.path] + list(a), check=check)
+
+    def gh(self, *a, check=True):
+        return _cmd(["gh"] + list(a), check=check)
+
+    def main_sha(self):
+        out = self.git("ls-remote", "origin", "main")
+        return out.split()[0] if out else None
+
+    def run(self, scenario, plugin_dir, version, usage):
+        self.count += 1
+        branch = "test/regression-%s-%s-%d" % (scenario["name"][:20] if not scenario["holdout"]
+                                              else "h" + holdout_id(scenario["name"])[-8:],
+                                              version, self.count)
+        main = self.main_sha()
+        made, tickets, parent = [], {}, None
+        local = os.path.join(self.path, ".claude", "settings.local.json")
+        try:
+            self.git("switch", "main")
+            self.git("switch", "-c", branch)
+            if scenario.get("config"):
+                cfg = os.path.join(self.path, "docs", "agents", "ticket-loop.md")
+                with open(cfg) as fh:
+                    text = fh.read()
+                with open(cfg, "w") as fh:
+                    fh.write(set_sections(text, scenario["config"]))
+                self.git("add", "docs/agents/ticket-loop.md")
+                self.git("commit", "-m", "Regression scenario config")
+            if scenario.get("settings_local") is not None:
+                os.makedirs(os.path.dirname(local), exist_ok=True)
+                with open(local, "w") as fh:
+                    json.dump(scenario["settings_local"], fh)
+            self.git("push", "origin", branch)
+            self.gh("label", "create", "in-progress", "--repo", self.repo, "--force")
+            parent = _issue_number(self.gh("issue", "create", "--repo", self.repo,
+                                           "--title", "Regression run %d" % self.count,
+                                           "--body", "A regression suite run. Closed after."))
+            made.append(parent)
+            ids = {}
+            for t in scenario["tickets"]:
+                argv = ["issue", "create", "--repo", self.repo, "--title", t["title"],
+                        "--body", t["body"]]
+                for lab in t.get("labels", []):
+                    argv += ["--label", lab]
+                n = _issue_number(self.gh(*argv))
+                made.append(n)
+                tickets[t["key"]] = {"number": n}
+                ids[t["key"]] = self.gh("api", "repos/%s/issues/%d" % (self.repo, n), "--jq", ".id")
+                self.gh("api", "-X", "POST", "repos/%s/issues/%d/sub_issues" % (self.repo, parent),
+                        "-F", "sub_issue_id=%s" % ids[t["key"]])
+            for b, a in scenario.get("blocked_by", []):
+                self.gh("api", "-X", "POST", "repos/%s/issues/%d/dependencies/blocked_by"
+                        % (self.repo, tickets[b]["number"]), "-F", "issue_id=%s" % ids[a])
+            for key in scenario.get("claim", []):
+                self.gh("issue", "edit", str(tickets[key]["number"]), "--repo", self.repo,
+                        "--add-label", "in-progress")
+            before = usage()
+            env = {k: v for k, v in os.environ.items() if k != "CLAUDE_CODE_EFFORT_LEVEL"}
+            prompt = "/ticket-loop:ticket-loop " + fill_args(scenario["args"], tickets, parent)
+            out = os.path.join(self.work, "%s.jsonl" % branch.replace("/", "_"))
+            with open(out, "w") as fh:
+                subprocess.run(["claude", "-p", prompt, "--plugin-dir", plugin_dir,
+                                "--model", "sonnet", "--output-format", "stream-json", "--verbose",
+                                "--allowedTools", "Bash(gh:*) Bash(git:*) Bash(python3:*) Read "
+                                "Edit Write Glob Grep Skill Agent SendMessage"],
+                               cwd=self.path, stdin=subprocess.DEVNULL, stdout=fh,
+                               stderr=subprocess.DEVNULL, env=env, timeout=3 * 3600)
+            after = usage()
+            with open(out) as fh:
+                s = parse_stream(fh.read())
+            for key, t in tickets.items():
+                v = json.loads(self.gh("issue", "view", str(t["number"]), "--repo", self.repo,
+                                       "--json", "state,labels"))
+                t.update(state=v["state"], labels=[l["name"] for l in v["labels"]])
+            log = self.git("log", "--format=%B%x1e", "main..HEAD", check=False)
+            obs = {"stream": s, "tickets": tickets, "main_moved": self.main_sha() != main,
+                   "commits": [c.strip() for c in log.split("\x1e") if c.strip()]}
+            g = grade(scenario["checks"], obs)
+            g.update(models=s["models"], cost_usd=s["cost_usd"],
+                     usage=(after - before) if None not in (before, after) else None)
+            return g
+        finally:
+            for n in made:
+                self.gh("issue", "close", str(n), "--repo", self.repo, "--reason", "not planned",
+                        check=False)
+            if os.path.exists(local):
+                os.remove(local)
+            self.git("switch", "-f", "main", check=False)
+            self.git("branch", "-D", branch, check=False)
+            self.git("push", "origin", "--delete", branch, check=False)
+            if self.main_sha() != main:
+                raise RuntimeError("the sandbox's main moved during %s: stop and check it" % branch)
+
+
+def _usage_report():
+    env = os.environ.get("TICKET_LOOP_USAGE_JSON")
+    if env:
+        with open(env) as fh:
+            return json.load(fh)
+    tc = os.environ.get("TICKET_LOOP_TOKENCOUNT")
+    if not tc:
+        found = glob.glob(os.path.expanduser("~/.claude/plugins/cache/*/tokencount/*/tokencount"))
+        found.sort(key=lambda p: [int(x) if x.isdigit() else 0
+                                  for x in os.path.basename(os.path.dirname(p)).split(".")])
+        tc = found[-1] if found else None
+    if not tc:
+        return None
+    try:
+        return json.loads(_cmd([sys.executable, tc, "--json"], timeout=120))
+    except (RuntimeError, ValueError, subprocess.TimeoutExpired):
+        return None
+
+
+def _guard():
+    path = os.path.join(os.path.expanduser(os.environ.get("CLAUDE_CONFIG_DIR", "~/.claude")),
+                        "tokencount-guard.json")
+    try:
+        with open(path) as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return None
+
+
+def _week_used():
+    r = _usage_report()
+    return ((r or {}).get("week") or {}).get("percent_used")
+
+
+def _checkout(ref, work, name):
+    """A plugin dir for a version: a path as it is, or a detached worktree of a git ref."""
+    if os.path.isdir(ref):
+        return os.path.abspath(ref), _cmd(["git", "-C", ref, "rev-parse", "--short", "HEAD"]), False
+    path = os.path.join(work, name)
+    _cmd(["git", "-C", ROOT, "worktree", "add", "--detach", path, ref])
+    return path, _cmd(["git", "-C", path, "rev-parse", "--short", "HEAD"]), True
+
+
+def compare(opts):
+    home = os.path.expanduser(os.environ.get("TICKET_LOOP_HOME", "~/.ticket-loop"))
+    hold = os.path.expanduser(os.environ.get("TICKET_LOOP_HOLDOUT", "~/.ticket-loop-holdout"))
+    sandbox = os.path.expanduser(os.environ.get("TICKET_LOOP_SANDBOX",
+                                                "~/github/ticket-loop-sandbox"))
+    scenarios = load_scenarios(os.path.join(ROOT, "regression", "scenarios"), hold)
+    if opts.only:
+        scenarios = [s for s in scenarios if s["holdout"] or s["name"] in opts.only]
+    if not any(s["holdout"] for s in scenarios):
+        print("note: no held-out scenarios at %s: the held-out check is not made" % hold)
+    with open(os.path.join(ROOT, "docs", "agents", "ticket-loop.md")) as fh:
+        cap = cap_text(fh.read())
+    work = tempfile.mkdtemp(prefix="ticket-loop-regression-")
+    dirs, made = {}, []
+    versions = {}
+    for v, ref in (("baseline", opts.baseline), ("candidate", opts.candidate)):
+        d, sha, new = _checkout(ref, work, v)
+        dirs[v], versions[v] = d, "%s@%s" % (ref if not os.path.isdir(ref) else "working-copy", sha)
+        if new:
+            made.append(d)
+    box = Sandbox(sandbox, work)
+    with open(os.path.join(sandbox, "docs", "agents", "ticket-loop.md"), "rb") as fh:
+        box_cfg = hashlib.sha256(fh.read()).hexdigest()[:12]
+    conditions = {"sandbox_main": box.main_sha(), "sandbox_config_sha256": box_cfg,
+                  "model_flag": "sonnet", "effort": "CLAUDE_CODE_EFFORT_LEVEL unset; the "
+                  "sandbox config's Models", "claude": _cmd(["claude", "--version"], check=False),
+                  "stream_dir": work}
+    try:
+        result = run_comparison(
+            scenarios, opts.repeats, opts.target,
+            lambda s, v: box.run(s, dirs[v], v, _week_used),
+            lambda: cap_check(_usage_report(), cap, _guard(), datetime.now(timezone.utc)),
+            conditions)
+    finally:
+        for d in made:
+            _cmd(["git", "-C", ROOT, "worktree", "remove", "--force", d], check=False)
+    result["versions"] = versions
+    path = write_result(home, result, datetime.now(timezone.utc))
+    print("%s: %s" % (result["verdict"], "; ".join(result["reasons"]) or "no reasons"))
+    for n in result["notes"]:
+        print("note: " + n)
+    print("result file: " + path)
+    return 0 if result["verdict"] == "pass" else 1
+
+
+def main(argv):
+    import argparse
+    ap = argparse.ArgumentParser(prog="ticket-loop-regression",
+                                 description="The ticket-loop sandbox regression suite.")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    c = sub.add_parser("compare", help="run the controlled comparison")
+    c.add_argument("--baseline", required=True, help="git ref or path of the frozen version")
+    c.add_argument("--candidate", default=ROOT, help="git ref or path (default: this checkout)")
+    c.add_argument("--target", action="append", default=[], help="a scenario the change targets")
+    c.add_argument("--only", action="append", default=[], help="run only this visible scenario")
+    c.add_argument("--repeats", type=int, default=DEFAULT_REPEATS)
+    sub.add_parser("list", help="list the scenarios")
+    g = sub.add_parser("grade", help="grade one saved run")
+    g.add_argument("scenario")
+    g.add_argument("observation", help="JSON: tickets, commits, main_moved, stream (a .jsonl path)")
+    a = ap.parse_args(argv)
+    if a.cmd == "list":
+        hold = os.path.expanduser(os.environ.get("TICKET_LOOP_HOLDOUT", "~/.ticket-loop-holdout"))
+        for s in load_scenarios(os.path.join(ROOT, "regression", "scenarios"), hold):
+            print(holdout_id(s["name"]) if s["holdout"] else s["name"])
+        return 0
+    if a.cmd == "grade":
+        with open(a.scenario) as fh:
+            scen = json.load(fh)
+        with open(a.observation) as fh:
+            obs = json.load(fh)
+        with open(obs["stream"]) as fh:
+            obs["stream"] = parse_stream(fh.read())
+        v = grade(scen["checks"], obs)
+        print(json.dumps(v, indent=2))
+        return 0 if v["pass"] else 1
+    unknown = set(a.only) - {s["name"] for s in load_scenarios(
+        os.path.join(ROOT, "regression", "scenarios"), "/nonexistent")}
+    if unknown or set(a.target) - (set(a.only) or {s["name"] for s in load_scenarios(
+            os.path.join(ROOT, "regression", "scenarios"), "/nonexistent")}):
+        ap.error("unknown scenario in --only or --target")
+    return compare(a)
+
+
+def _slug(text):
+    return re.sub(r"[^A-Za-z0-9._-]+", "-", str(text)).strip("-")[:40] or "x"
+
+
+def write_result(home, result, now):
+    """Write the comparison's one result file as a new file; never change an old one."""
+    folder = os.path.join(home, "runs", "_sandbox", "regression")
+    os.makedirs(folder, exist_ok=True)
+    v = result.get("versions") or {}
+    stem = "%s-%s-vs-%s" % (now.strftime("%Y-%m-%d"), _slug(v.get("baseline")),
+                            _slug(v.get("candidate")))
+    while True:
+        path = os.path.join(folder, "%s-%s.json" % (stem, os.urandom(3).hex()))
+        try:
+            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+        except FileExistsError:
+            continue
+        with os.fdopen(fd, "w") as fh:
+            json.dump(result, fh, indent=2, sort_keys=True)
+            fh.write("\n")
+        return path
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

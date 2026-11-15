@@ -14,7 +14,7 @@ Next is the first open sub-issue, in the parent's sub-issue order, whose blocker
 
 ## Checks
 
-`claude plugin validate .` (exit code is the verdict; warnings don't fail it), and `python3 -m unittest discover -s scripts -p 'test_*.py'` (the status line and record scripts' tests).
+`claude plugin validate .` (exit code is the verdict; warnings don't fail it), and `python3 -m unittest discover -s scripts -p 'test_*.py'` (the tests of the status line script, the record script and the regression suite).
 
 ## Test queue
 
@@ -45,6 +45,7 @@ Test hooks:
 - **Writing standard:** add a `## Writing` section to the sandbox config with the text `ASD-STE100` to test the writing rule; leave it out to test the default. For the dictionary check, write `ASD-STE100, dictionary at <path>` with the path to the user's own local copy of the PDF (the repo never holds one). Copy the sandbox a `GLOSSARY.md` from this repo's root if the test needs the project terms.
 - **Status line script:** run `scripts/ticket-loop-statusline` with no stdin, or with `--with '<command>'`. Set `TICKET_LOOP_USAGE_JSON` to a saved tokencount `--json` report and `TICKET_LOOP_NOW` to an ISO time to fix its input. Write a sample `.ticket-loop-status` at the repo root to show a run (the repo's `.gitignore` lists it). Unit tests: `python3 -m unittest discover -s scripts -p 'test_*.py'`.
 - **Run store script:** run `scripts/ticket-loop-record write <record.json>` or `pull` with `TICKET_LOOP_HOME` set to a temporary folder and `TICKET_LOOP_STORE_REMOTE` set to a local bare repo (`git init --bare`), never the real `~/.ticket-loop/`.
+- **Regression suite:** `scripts/ticket-loop-regression compare --baseline <last published ref>` runs the fixed scenarios in `regression/` on both versions and writes one result file (see `regression/README.md`). Run it before each milestone publish and when the user asks. Point its unit tests at fixtures: `TICKET_LOOP_HOME`, `TICKET_LOOP_HOLDOUT`, `TICKET_LOOP_SANDBOX` and `TICKET_LOOP_USAGE_JSON` fix its paths and usage input.
 - **Milestone summary:** the sandbox config writes none; to test the milestone stop, set its Changelog to put a finished parent's summary under `## Unreleased`, above its entries.
 
 ## Reference

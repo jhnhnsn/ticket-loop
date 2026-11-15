@@ -1,0 +1,18 @@
+{
+  "name": "ships",
+  "from": "The base case: one ready ticket goes to shipped.",
+  "tickets": [
+    {"key": "a", "title": "Add a shout function",
+     "body": "Add `shout(text)` to the package. It returns the text in upper case with a `!` at the end. Add a unit test.",
+     "labels": ["ready-for-agent"]}
+  ],
+  "args": "{parent}",
+  "checks": [
+    {"check": "ticket_state", "ticket": "a", "state": "CLOSED"},
+    {"check": "commit_closes", "ticket": "a"},
+    {"check": "dispatched", "pattern": "^{a} implement", "min": 1},
+    {"check": "dispatched", "pattern": "^{a} (standards|spec) review", "min": 2},
+    {"check": "ticket_label", "ticket": "a", "label": "in-progress", "present": false},
+    {"check": "main_unchanged"}
+  ]
+}

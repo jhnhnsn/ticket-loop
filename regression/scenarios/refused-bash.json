@@ -1,0 +1,17 @@
+{
+  "name": "refused-bash",
+  "from": "Refused Bash commands: a refused command is rewritten simpler and the ticket still ships.",
+  "tickets": [
+    {"key": "a", "title": "Add a shout function",
+     "body": "Add `shout(text)` to the package. It returns the text in upper case with a `!` at the end. Add a unit test.",
+     "labels": ["ready-for-agent"]}
+  ],
+  "settings_local": {"permissions": {"deny": ["Bash(git add -A*)", "Bash(git add .*)", "Bash(git commit -a*)", "Bash(*&&*)", "Bash(*|*)"]}},
+  "args": "{parent}",
+  "checks": [
+    {"check": "ticket_state", "ticket": "a", "state": "CLOSED"},
+    {"check": "commit_closes", "ticket": "a"},
+    {"check": "report_matches", "pattern": "only the user can do", "present": false},
+    {"check": "main_unchanged"}
+  ]
+}

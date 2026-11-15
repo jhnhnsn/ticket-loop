@@ -1,0 +1,23 @@
+{
+  "name": "claimed-skip",
+  "from": "#49: a claimed ticket is skipped and named in the hand-back.",
+  "tickets": [
+    {"key": "a", "title": "Add a whisper function",
+     "body": "Add `whisper(text)` to the package. It returns the text in lower case. Add a unit test.",
+     "labels": ["ready-for-agent"]},
+    {"key": "b", "title": "Add a shout function",
+     "body": "Add `shout(text)` to the package. It returns the text in upper case with a `!` at the end. Add a unit test.",
+     "labels": ["ready-for-agent"]}
+  ],
+  "claim": ["a"],
+  "args": "{parent}",
+  "checks": [
+    {"check": "ticket_state", "ticket": "a", "state": "OPEN"},
+    {"check": "no_commit_closes", "ticket": "a"},
+    {"check": "dispatched", "pattern": "^{a} ", "max": 0},
+    {"check": "report_matches", "pattern": "{a}\\b.{0,40}skipped.{0,40}claimed"},
+    {"check": "ticket_state", "ticket": "b", "state": "CLOSED"},
+    {"check": "commit_closes", "ticket": "b"},
+    {"check": "main_unchanged"}
+  ]
+}
