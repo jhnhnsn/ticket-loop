@@ -29,6 +29,7 @@ Call the Skill tool with `mattpocock-skills:grilling`. The design tree's root qu
 12. **Daily cap:** the share of the plan's weekly usage one day may take before the loop stops to ask. Recommend one day's share, 14.3% (100 ÷ 7). Then ask its mode, recommending rolling: **rolling** (the week's use so far against the share × the day of the usage week, so a light day leaves more for the next) or **per day** (today's use against the share; unused allowance is lost at midnight). For rolling, start the config's Daily cap text with `Rolling:` (`Rolling: 14.3% of the plan's weekly usage per day.`); any other text is per day. Not applicable without plan usage to read (an API key rather than a Pro, Max or Ultra plan). The loop reads the use (today's or the week's) with the tokencount plugin (1.1.0 or later); if it isn't installed, say how (`claude plugin marketplace add jhnhnsn/tokencount`, `claude plugin install tokencount@tokencount`, then a restart).
 13. **Ticket budget:** the tickets one coordinator ships before handing back to a fresh one (a parallel build in hand finishes first), so no coordinator's context grows too large. Recommend 4.
 14. **Writing:** the standard the agents write in: their messages, briefs, reports and ticket comments, not code or commit messages. Recommend plain English, no standard, which writes no `## Writing` section. The option is `ASD-STE100` (Simplified Technical English, [Issue 9](https://www.asd-ste100.org/assets/files/ASD-STE100_ISSUE9.pdf)), written as the section's text. If the user picks it, ask for an optional local path to their own copy of the PDF (`ASD-STE100, dictionary at ~/Documents/ASD-STE100_ISSUE9.pdf`): with a path, the Standards reviewer looks up doubtful words in it by reading it; without one, words aren't checked. Tell the user the standard is copyrighted, so the loop never copies or extracts its text, and that project terms go in a root `GLOSSARY.md`.
+15. **Repos:** "Do this project's tickets change other repos?" Recommend no, which writes no `## Repos` section: the project stays single-repo, and the loop doesn't ask again. With a yes, ask for each extra repo its path (relative to this repo, such as `../backend`, so the config works wherever the repos are cloned side by side), its checks command and its ship branch; read its git remote with `git -C <path> remote get-url origin`. This repo is the **home repo**: it keeps the tracker, the status file and the test queue. Create the `multi-repo` label, as `in-progress` is created (`gh label create multi-repo --description "The ticket changes repos other than the home repo"` on GitHub): only a ticket with it may change an extra repo, and it always builds alone. To add repos later, run setup again or add the section by hand.
 
 Done when the grilling's frontier is empty and the user confirms the answers.
 
@@ -61,15 +62,22 @@ If the user says no, or the setting has a type other than `command`, change noth
 
 Without a remote, the store stays a local repo on that machine.
 
+**Repos.** With a `## Repos` section, the loop works in each extra repo, and the loop never changes user settings. For each extra repo, show the user these entries to add, one time on each machine, and don't add them:
+
+1. In this repo's `.claude/settings.local.json` (not committed, so each machine keeps its own path, and no trust dialog): `permissions.additionalDirectories` with the repo's absolute path.
+2. Allow rules, in the same file: `Bash(git -C <path> add *)`, `Bash(git -C <path> commit *)`, `Bash(git -C <path> push *)`, and the repo's checks command.
+
+At the run start, the coordinator checks for the `additionalDirectories` entry, and stops with these steps if it is missing.
+
 ## 4. Write it
 
-Write `docs/agents/ticket-loop.md` with one short section per question above, in that order, each the confirmed answer in a few lines: commands in backticks, files as paths, no rationale beyond a clause. The Tickets section lists the labels, `in-progress` (a ticket claimed by a running loop) among them, and has a line `Read a ticket: <read command>.` In the Test queue section, list the test hooks the app has. Last, add a `## Status line` section with the answer from step 3: `Added.`, `Declined.` or `Not added: the statusLine type is not command.`
+Write `docs/agents/ticket-loop.md` with one short section per question above, in that order, each the confirmed answer in a few lines: commands in backticks, files as paths, no rationale beyond a clause. The Tickets section lists the labels, `in-progress` (a ticket claimed by a running loop) among them, and has a line `Read a ticket: <read command>.` In the Test queue section, list the test hooks the app has. With extra repos, add a `## Repos` section after Writing, one line per repo in ship order: `- <path>: remote <url>, checks <command>, ship branch <branch>.` Last, add a `## Status line` section with the answer from step 3: `Added.`, `Declined.` or `Not added: the statusLine type is not command.`
 
 Add the line `.ticket-loop-status` to the repo's `.gitignore`, so the status file never goes into a commit. Make the file if it does not exist. Add a pointer line to CLAUDE.md's agent docs (`Ticket loop: see docs/agents/ticket-loop.md`). Commit the three files. To change the config later, edit the file; to redo it, delete it and run the loop again.
 
 ## 5. Prove the loop closes
 
-Prove each of the seven legs (Check, Run, Drive, Ship, Record, Cap, Claim) by doing it, as [`CLOSED-LOOP.md`](CLOSED-LOOP.md) says.
+Prove each of the seven legs (Check, Run, Drive, Ship, Record, Cap, Claim) by doing it, as [`CLOSED-LOOP.md`](CLOSED-LOOP.md) says. With a `## Repos` section, also prove two legs for each extra repo, after the user adds its entries (step 3, Repos): the Check leg (run its checks command in that repo) and the Ship leg (`git -C <path> push --dry-run origin <ship branch>`).
 
 - **Every leg closed or not applicable:** start the loop.
 - **Any leg open:** file one ticket per open leg under an **M0 · Closed loop** parent, as `CLOSED-LOOP.md` says. Tell the user which legs are open and which tickets need them, then stop. The user works M0 with you in an ordinary session and runs the loop again once it's closed.

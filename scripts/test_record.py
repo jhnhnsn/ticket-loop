@@ -141,6 +141,26 @@ class Store(unittest.TestCase):
             self.assertEqual(r.stdout.strip(),
                              f"run record: not written (record not valid: {reason})")
 
+    def test_multi_repo_record_lists_each_repo_and_its_commits(self):
+        multi = dict(RECORD, commits=["aaa111"],
+                     repos=[{"repo": "../backend", "commits": ["bbb222", "ccc333"]}])
+        r = self.run_script("write", self.record_file(multi))
+        self.assertEqual(r.stdout.strip(), f"run record: written ({NAME}, no remote)")
+        with open(os.path.join(self.home, NAME)) as f:
+            self.assertEqual(json.load(f)["repos"], multi["repos"])
+
+    def test_repos_are_checked(self):
+        bad = [{"repo": "../backend"}, {"repo": "", "commits": []},
+               {"repo": "../backend", "commits": "bbb222"},
+               {"repo": "../backend", "commits": [1]}, "../backend"]
+        for entry in bad:
+            r = self.run_script("write", self.record_file(dict(RECORD, repos=[entry])))
+            self.assertEqual(r.stdout.strip(), "run record: not written (record not valid:"
+                             " each repos entry needs a repo and a list of commits)")
+        r = self.run_script("write", self.record_file(dict(RECORD, repos={"repo": "x"})))
+        self.assertEqual(r.stdout.strip(),
+                         "run record: not written (record not valid: repos is not a list)")
+
     def test_not_json(self):
         path = os.path.join(self.work, "bad.json")
         with open(path, "w") as f:

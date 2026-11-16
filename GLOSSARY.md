@@ -36,6 +36,10 @@ This project's own terms. With a `## Writing` section of `ASD-STE100`, they are 
 - **claim:** the `in-progress` label, the assignee and the claim comment that mark a ticket as taken by one run.
 - **run ID:** the coordinator's own agent label and the claim time, in a claim comment or a release comment.
 - **claimed ticket:** a ticket with the `in-progress` label, or an assignee who is not the run's user.
+- **home repo:** the repository that holds the loop config, the tracker, the status file and the test queue.
+- **extra repo:** a repository that the loop config's `## Repos` section lists, other than the home repo.
+- **multi-repo ticket:** a ticket with the `multi-repo` label; only such a ticket can change an extra repo.
+- **changed repo:** a repository whose `HEAD` moved from its start commit during a ticket's build.
 - **brief:** the prompt an agent gives a subagent it starts.
 - **report:** what a subagent returns.
 - **ticket report:** the few lines a coordinator writes per shipped ticket.

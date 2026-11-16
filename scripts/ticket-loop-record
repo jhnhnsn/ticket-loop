@@ -84,6 +84,16 @@ def check(record):
         return "ticket is not a number"
     if not isinstance(record["run_id"], str) or not RUN_ID.match(record["run_id"]):
         return f"run_id has characters other than {SAFE} and ':'"
+    if "repos" in record:
+        # A multi-repo ticket: each changed repo other than the home repo, with its commits.
+        repos = record["repos"]
+        if not isinstance(repos, list):
+            return "repos is not a list"
+        for entry in repos:
+            if not (isinstance(entry, dict) and isinstance(entry.get("repo"), str)
+                    and entry["repo"] and isinstance(entry.get("commits"), list)
+                    and all(isinstance(c, str) for c in entry["commits"])):
+                return "each repos entry needs a repo and a list of commits"
     return None
 
 
