@@ -22,7 +22,7 @@ Like the triage labels (see `triage-labels.md`), this maps a ticket-loop role to
 | ------------------- | -------------------- | ----------------------------------------------------------------- |
 | research opt-in     | `research`           | The loop runs a researcher before each implementer on this ticket |
 | claim               | `in-progress`        | A running loop has claimed this ticket; other runs skip it        |
-| multi-repo          | `multi-repo`         | The ticket may change the extra repos the loop config lists; it builds alone |
+| multi-repo          | `multi-repo`         | The ticket may change the config's extra repos; it builds alone   |
 
 The loop uses these literal names in every project. A run claims a ticket with `gh issue edit <n> --add-assignee @me --add-label in-progress` and a claim comment, and removes the label at ship or at a stop (see `agents/coordinator.md`, step 1, Claim).
 

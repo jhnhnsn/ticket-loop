@@ -55,7 +55,7 @@ The config's Concurrency section gives the **concurrency mode** and the **concur
 
 A config with any other text keeps working, and setup doesn't ask again. Other text that offers parallel worktrees is suggest and ask, as such a config always asked. All remaining text, or no section, is one at a time. The limit is the number the text gives, or 2 without one.
 
-The **parallel set** is the first tickets up to the limit, in the run's order, that are open and ready-for-agent with no open blockers. Tickets with open blockers never count, so tickets blocked on each other make no set. Fewer than two tickets is no set, and nobody asks anything. A set is the same set whatever its order.
+The **parallel set** is the first tickets up to the limit, in the run's order, that are open and ready-for-agent with no open blockers and no `multi-repo` label. A `multi-repo` ticket always builds alone: if the next ticket has the label, there is no set, and a later one ends the set before it. Tickets with open blockers never count, so tickets blocked on each other make no set. Fewer than two tickets is no set, and nobody asks anything. A set is the same set whatever its order.
 
 The **answered sets** are the sets the user accepted or declined in this run. You keep them for the whole run and give them in every coordinator's brief, so the loop asks no set twice.
 
