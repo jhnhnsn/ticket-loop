@@ -161,9 +161,9 @@ Read them before you write anything for the moment they show, and print them:
 
    **Background notices.** Claude Code can tell you that a coordinator "is waiting on its own background work". Claude Code writes its own line for each notice. Claude Code also needs visible text from you at each notice: it refuses an empty turn and asks again. Your answer depends on the config's `## Status line` section:
    - **The section says `Added.`** The status line shows the same state, and it does not scroll. Read nothing. Write exactly `Running: see the status line.` and end your turn.
-   - **Any other value, or no section.** Read the status file. Write one line for the first notice. After that, write one only when the step or what runs now changes. Give the ticket, its step, what runs now, and the minutes since the `since` time. Add the Tickets progress bar from the file's counts:
+   - **Any other value, or no section.** Read the status file. Write one line when you have written no line yet in this run. After that, write one only when the step or what runs now changes. Give the ticket, its step, what runs now, and the minutes since the `since` time. Add the Tickets progress bar from the file's counts:
      `#121 is in the test queue, running the browser suite (4 min). Tickets [░░░░░░░░░░] 0 of 1 shipped.`
-     With no change, write exactly `No change since the last line.` and end your turn. When the No run rule is true and you have no line yet, say once that you have no status yet. Don't guess.
+     With no change, write exactly `No change since the last line.` and end your turn. When the No run rule is true and you have no line yet, say once that you have no status yet. At the next notices, write exactly `No change since the last line.` Don't guess.
 
    When the user asks for progress, answer from the status file, the transcript, the tracker and `git log`, as above.
 

@@ -106,14 +106,16 @@ yours, and stops only when it needs you and at the end of each milestone.
    waiting on its own background work". Claude Code needs visible text from the main thread
    at each notice, so the main thread always writes a line. If the config's `## Status line`
    section says `Added.`, the main thread writes only `Running: see the status line.` at this
-   notice. The status line shows the state. Without the status line, the main thread reads the file. It writes one line for the
-   first notice. After that, it writes one only when the step or what runs now changes:
+   notice. The status line shows the state. Without the status line, the main thread reads
+   the file. It writes one line when it has written no line yet in this run. After that, it
+   writes one only when the step or what runs now changes:
 
    ```
    #121 is in the test queue, running the browser suite (4 min). Tickets [░░░░░░░░░░] 0 of 1 shipped.
    ```
 
-   With no change since its last line, it writes `No change since the last line.` With no status yet, it says so once.
+   With no change since its last line, it writes `No change since the last line.` With no
+   status yet, it says so once, and after that it writes `No change since the last line.`
    You can ask for progress at any time.
 
    **The status line.** The plugin has a status line script, `scripts/ticket-loop-statusline`,
