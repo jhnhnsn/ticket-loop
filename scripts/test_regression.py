@@ -54,6 +54,11 @@ class ParseStream(unittest.TestCase):
     def test_no_result_line_is_no_report(self):
         self.assertIsNone(rg.parse_stream("")["report"])
 
+    def test_string_message_event_is_skipped_and_denial_counts_once(self):
+        s = stream("permission-denied.jsonl")
+        self.assertEqual(len(s["refusals"]), 1)
+        self.assertEqual(s["report"], "Stopped at the refused command.")
+
 
 class Grade(unittest.TestCase):
     def test_all_checks_hold_is_a_pass(self):

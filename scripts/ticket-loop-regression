@@ -59,7 +59,9 @@ def parse_stream(text):
         kind = ev.get("type")
         if kind == "system" and ev.get("model"):
             models.add(ev["model"])
-        msg = ev.get("message") or {}
+        msg = ev.get("message")
+        if not isinstance(msg, dict):
+            msg = {}
         if kind == "assistant" and msg.get("model"):
             models.add(msg["model"])
         parts = msg.get("content")
