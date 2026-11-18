@@ -10,6 +10,10 @@ Usage in settings: {"type": "command", "command": "python3 <this file>", "refres
 To keep an existing status line: python3 <this file> --with '<their command>'
 (their output comes first, then this line).
 
+For the loop: python3 <this file> --usage <loop config path> prints the daily cap's
+reading as one line of JSON (mode, use, limit, day, filled, over; or a reason), from a
+fresh tokencount report. The launcher's Usage bar and the coordinator's cap check use it.
+
 Test hooks (environment):
   TICKET_LOOP_USAGE_JSON  path to a tokencount --json report to use instead of tokencount
   TICKET_LOOP_TOKENCOUNT  path to the tokencount script
@@ -67,10 +71,18 @@ def status_path(common_dir):
     return os.path.join(os.path.dirname(common_dir.rstrip("/")), STATUS_FILE)
 
 
-def bar(use, limit):
+def filled_cells(use, limit):
+    """The 10-cell bar's filled count: round(10 x use / limit), halves up, 0 to 10."""
     filled = 0 if limit <= 0 else int(10 * use / limit + 0.5)
-    filled = max(0, min(10, filled))
+    return max(0, min(10, filled))
+
+
+def _cells(filled):
     return "[" + "█" * filled + "░" * (10 - filled) + "]"
+
+
+def bar(use, limit):
+    return _cells(filled_cells(use, limit))
 
 
 def cap_text(config):
@@ -83,28 +95,57 @@ def _share(cap):
     return float(m.group(1)) if m else 100 / 7
 
 
+def _not_applicable(cap):
+    return bool(cap) and cap.lower().startswith("not applicable")
+
+
+def usage_reading(report, cap, now):
+    """The daily cap's use against its limit, the one code path for every Usage bar and cap check.
+
+    Returns a dict: mode (per day, rolling, not applicable, unreadable), and for a readable
+    mode use, limit, day (rolling only), filled and over (use at or over the limit), with use
+    and limit to one decimal; unreadable gives a reason. Rolling days are 24-hour periods from
+    the week's start, 7 days before week.resets_at.
+    """
+    if cap is None:
+        return {"mode": "unreadable", "reason": "the loop config has no Daily cap section"}
+    if _not_applicable(cap):
+        return {"mode": "not applicable"}
+    if not report:
+        return {"mode": "unreadable", "reason": "tokencount is not installed or gave no report"}
+    if report.get("usage_source") == "unavailable":
+        return {"mode": "unreadable", "reason": "tokencount's usage_source is unavailable"}
+    share = _share(cap)
+    if cap.startswith("Rolling:"):
+        week = report.get("week") or {}
+        use, resets = week.get("percent_used"), parse_time(week.get("resets_at"))
+        if use is None or resets is None:
+            return {"mode": "unreadable",
+                    "reason": "week.percent_used or week.resets_at is null or bad"}
+        start = resets - timedelta(days=7)
+        day = max(1, min(7, int((now - start).total_seconds() // 86400) + 1))
+        limit = min(100.0, share * day)
+        return {"mode": "rolling", "use": round(use, 1), "limit": round(limit, 1), "day": day,
+                "filled": filled_cells(use, limit), "over": use >= limit}
+    use = (report.get("today") or {}).get("percent_of_week")
+    if use is None:
+        return {"mode": "unreadable", "reason": "today.percent_of_week is null"}
+    return {"mode": "per day", "use": round(use, 1), "limit": round(share, 1),
+            "filled": filled_cells(use, share), "over": use >= share}
+
+
 def usage_part(report, cap, now):
     if not report or report.get("usage_source") == "unavailable":
         return None
-    if cap and cap.lower().startswith("not applicable"):
-        return None
-    week = report.get("week") or {}
     if cap is None:
-        use = week.get("percent_used")
+        use = (report.get("week") or {}).get("percent_used")
         return None if use is None else "Usage %s %.1f%% week" % (bar(use, 100), use)
-    share = _share(cap)
-    if cap.startswith("Rolling:"):
-        use, resets = week.get("percent_used"), parse_time(week.get("resets_at"))
-        if use is None or resets is None:
-            return None
-        start = resets - timedelta(days=7)
-        day = max(1, min(7, int((now - start).total_seconds() // 86400) + 1))
-        allowance = min(100.0, share * day)
-        return "Usage %s %.1f%%/%.1f%% d%d" % (bar(use, allowance), use, allowance, day)
-    use = (report.get("today") or {}).get("percent_of_week")
-    if use is None:
-        return None
-    return "Usage %s %.1f%%/%.1f%% today" % (bar(use, share), use, share)
+    r = usage_reading(report, cap, now)
+    if r["mode"] == "rolling":
+        return "Usage %s %.1f%%/%.1f%% d%d" % (_cells(r["filled"]), r["use"], r["limit"], r["day"])
+    if r["mode"] == "per day":
+        return "Usage %s %.1f%%/%.1f%% today" % (_cells(r["filled"]), r["use"], r["limit"])
+    return None
 
 
 def render(status_text, status_mtime, now, report, cap):
@@ -181,15 +222,26 @@ def _spawn_refresh(cache):
     return spawn
 
 
-def refresh_usage(cache):
-    """Run tokencount --json and write its report to the cache (the detached child)."""
+def fetch_report():
+    """A fresh tokencount --json report, or None when tokencount is missing or fails."""
+    tc = _find_tokencount()
+    if not tc or not os.path.isfile(tc):
+        return None
     try:
-        tc = _find_tokencount()
-        if not tc:
-            return
         out = subprocess.run([sys.executable, tc, "--json"], capture_output=True,
                              text=True, timeout=60).stdout
         report = json.loads(out)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+    return report if isinstance(report, dict) else None
+
+
+def refresh_usage(cache):
+    """Run tokencount --json and write its report to the cache (the detached child)."""
+    try:
+        report = fetch_report()
+        if report is None:
+            return
         tmp = "%s.%d.tmp" % (cache, os.getpid())
         with open(tmp, "w") as f:
             json.dump(report, f)
@@ -203,7 +255,8 @@ def refresh_usage(cache):
             pass
 
 
-def _usage():
+def _usage(fresh=False):
+    """The test hook's report, else a fresh one (fresh=True) or the cached one."""
     env = os.environ.get("TICKET_LOOP_USAGE_JSON")
     if env:
         try:
@@ -211,6 +264,8 @@ def _usage():
                 return json.load(f)
         except (OSError, ValueError):
             return None
+    if fresh:
+        return fetch_report()
     cache = cache_path()
     return read_usage(cache, time.time(), _spawn_refresh(cache))
 
@@ -233,9 +288,36 @@ def _read(path):
         return None, None
 
 
+def usage_mode(args):
+    """--usage <loop config path>: print usage_reading() as one line of JSON.
+
+    Reads a fresh tokencount report (never the status line's cache), and none when the
+    cap is not applicable. Any failure still prints an unreadable line, never nothing.
+    """
+    try:
+        if len(args) != 1:
+            raise ValueError("usage: ticket-loop-statusline --usage <loop config path>")
+        config, _ = _read(args[0])
+        if config is None:
+            raise ValueError("can't read the loop config at %s" % args[0])
+        cap = cap_text(config)
+        now_env = os.environ.get("TICKET_LOOP_NOW")
+        now = parse_time(now_env) if now_env else datetime.now(timezone.utc)
+        if now is None:
+            raise ValueError("TICKET_LOOP_NOW is not an ISO time")
+        report = None if cap is None or _not_applicable(cap) else _usage(fresh=True)
+        reading = usage_reading(report, cap, now)
+    except Exception as e:
+        reading = {"mode": "unreadable", "reason": str(e) or type(e).__name__}
+    print(json.dumps(reading))
+
+
 def _main(argv):
     if len(argv) == 2 and argv[0] == "--refresh-usage":
         refresh_usage(argv[1])
+        return
+    if argv and argv[0] == "--usage":
+        usage_mode(argv[1:])
         return
     stdin = sys.stdin.read()
     try:

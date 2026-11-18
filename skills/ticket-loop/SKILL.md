@@ -71,14 +71,14 @@ Usage    [████░░░░░░] 6.1% of the week today, cap 14.3%
 With a rolling cap, the Usage line reads `Usage    [█████░░░░░] 15.0% of the week so far, allowance 28.6% (day 2 of 7)`.
 
 - **Tickets:** for a parent, its tickets (an issue's sub-issues, or a milestone's issues), open or closed, are the total; the closed ones are shipped. For named tickets, the total is the tickets the user named for the run, and the shipped are the named ones that are closed; after a handover, the total is still the run's original named set, not the fresh coordinator's shorter list. Get the state of each ticket with the state read (see Bash rules above), never a read of its body.
-- **Usage:** the use against the limit from the Skill tool's `tokencount:tokencount` `--json` report, worked out for the config's mode exactly as the coordinator's Daily cap section says ([`agents/coordinator.md`](../../agents/coordinator.md)), each to one decimal. The bars never stop the run: the coordinator's own cap check does that.
-  - **Per day** (the config's Daily cap text doesn't start with `Rolling:`): `Usage    [bar] <today.percent_of_week>% of the week today, cap <share>%`.
-  - **Rolling** (the text starts with `Rolling:`): `Usage    [bar] <week.percent_used>% of the week so far, allowance <allowance>% (day <d> of 7)`.
-  - **Cap not applicable** (the config's Daily cap says so): `Usage    not applicable (no plan usage to read)`, with no bar and no tokencount read.
-  - **Unreadable** (tokencount isn't installed or isn't available, its `usage_source` is `unavailable`, or the mode's fields are null, as the coordinator's Daily cap section lists them): `Usage    can't read today's usage`, with no bar.
+- **Usage:** the use against the limit for the config's mode, as the coordinator's Daily cap section defines it ([`agents/coordinator.md`](../../agents/coordinator.md)), each to one decimal. The plugin's status line script computes it, so do no date arithmetic and no bar arithmetic for Usage. Run it as one plain Bash command: `python3 <plugin folder>/scripts/ticket-loop-statusline --usage <main checkout>/docs/agents/ticket-loop.md`, where the plugin folder is two folders up from this skill's base directory. It reads a fresh tokencount report itself and prints one line of JSON: `mode`, and for a readable mode `use`, `limit`, `day` (rolling only), `filled` and `over`. Take the numbers from it as they are. The bars never stop the run: the coordinator's own cap check does that.
+  - **Per day** (`"mode": "per day"`): `Usage    [bar] <use>% of the week today, cap <limit>%`.
+  - **Rolling** (`"mode": "rolling"`): `Usage    [bar] <use>% of the week so far, allowance <limit>% (day <day> of 7)`.
+  - **Cap not applicable** (`"mode": "not applicable"`): `Usage    not applicable (no plan usage to read)`, with no bar. The script reads no usage for it.
+  - **Unreadable** (`"mode": "unreadable"`, with a `reason`; or the script gives no JSON): `Usage    can't read today's usage`, with no bar.
 - **Bars** are 10 cells wide, the filled cells `█` first, then the empty `░`, so filled + empty = 10. Work out the filled cells from this reading's numbers every time, and draw the bar anew; never copy an earlier bar, even when only the count changed:
   - **Tickets:** filled = round(10 × shipped ÷ total), halves up (0 when the total is 0). 3 of 10 fills 3; 1 of 3 fills 3; 2 of 3 fills 7 (`[███████░░░]`); 3 of 3 fills 10.
-  - **Usage:** filled = round(10 × use ÷ limit), halves up, at most 10; the limit is the cap per day, the allowance rolling. 6.1% of a 14.3% cap fills 4; 4.0% fills 3; 16.0% fills 10; 15.0% of a 28.6% allowance fills 5.
+  - **Usage:** filled is the script's `filled`. Its rule: round(10 × use ÷ limit), halves up, at most 10; the limit is the cap per day, the allowance rolling. 6.1% of a 14.3% cap fills 4; 4.0% fills 3; 16.0% fills 10; 15.0% of a 28.6% allowance fills 5.
 
   The labels are padded so both lines' second columns line up: `Tickets` then two spaces, `Usage` then four.
 

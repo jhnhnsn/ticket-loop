@@ -184,6 +184,98 @@ class Main(unittest.TestCase):
         self.assertIn("usage", err.lower())
 
 
+class UsageMode(unittest.TestCase):
+    """--usage <config>: one line of JSON for the launcher's bar and the coordinator's cap check."""
+
+    def setUp(self):
+        import tempfile
+        self.dir = tempfile.mkdtemp()
+
+    def write(self, name, text):
+        path = os.path.join(self.dir, name)
+        with open(path, "w") as f:
+            f.write(text)
+        return path
+
+    def usage(self, cap, report, now, tokencount=None):
+        import json
+        cfg = self.write("ticket-loop.md", "# Loop config\n\n## Daily cap\n\n%s\n\n## Other\n\nx\n" % cap)
+        env = {"TICKET_LOOP_NOW": now}
+        if report is not None:
+            env["TICKET_LOOP_USAGE_JSON"] = self.write("report.json", json.dumps(report))
+        if tokencount is not None:
+            env["TICKET_LOOP_TOKENCOUNT"] = tokencount
+        out, err = Main.run_main(self, ["--usage", cfg], env)
+        self.assertEqual(err, "")
+        return json.loads(out)
+
+    def rolling_report(self, use):
+        return {"usage_source": "live",
+                "week": {"percent_used": use, "resets_at": "2026-11-24T07:00:00+00:00"}}
+
+    def test_rolling_day_2_after_a_calendar_day_change(self):
+        # The week started 2026-11-17T07:00Z; 2026-11-18T09:00Z is 26 hours on: day 2.
+        got = self.usage(ROLLING, self.rolling_report(10.0), "2026-11-18T09:00:00+00:00")
+        self.assertEqual(got, {"mode": "rolling", "use": 10.0, "limit": 28.6, "day": 2,
+                               "filled": 3, "over": False})
+
+    def test_rolling_day_1_before_24_hours(self):
+        got = self.usage(ROLLING, self.rolling_report(15.0), "2026-11-18T06:59:00+00:00")
+        self.assertEqual(got, {"mode": "rolling", "use": 15.0, "limit": 14.3, "day": 1,
+                               "filled": 10, "over": True})
+
+    def test_per_day(self):
+        report = {"usage_source": "live", "today": {"percent_of_week": 6.1}}
+        got = self.usage("14.3% of the plan's weekly usage per day.", report,
+                         "2026-11-18T09:00:00+00:00")
+        self.assertEqual(got, {"mode": "per day", "use": 6.1, "limit": 14.3,
+                               "filled": 4, "over": False})
+
+    def test_per_day_at_the_limit_is_over(self):
+        report = {"usage_source": "live", "today": {"percent_of_week": 14.3}}
+        got = self.usage("14.3% a day.", report, "2026-11-18T09:00:00+00:00")
+        self.assertTrue(got["over"])
+
+    def test_not_applicable_reads_no_usage(self):
+        got = self.usage("Not applicable: no plan usage to read.", None,
+                         "2026-11-18T09:00:00+00:00", tokencount="/nonexistent")
+        self.assertEqual(got, {"mode": "not applicable"})
+
+    def test_unreadable_usage_source_unavailable(self):
+        got = self.usage(ROLLING, {"usage_source": "unavailable"}, "2026-11-18T09:00:00+00:00")
+        self.assertEqual(got["mode"], "unreadable")
+        self.assertIn("usage_source", got["reason"])
+
+    def test_unreadable_null_rolling_fields(self):
+        report = {"usage_source": "live", "week": {"percent_used": 10.0, "resets_at": None}}
+        got = self.usage(ROLLING, report, "2026-11-18T09:00:00+00:00")
+        self.assertEqual(got["mode"], "unreadable")
+        self.assertIn("week.resets_at", got["reason"])
+
+    def test_unreadable_null_per_day_field(self):
+        report = {"usage_source": "live", "today": {"percent_of_week": None}}
+        got = self.usage("14.3% a day.", report, "2026-11-18T09:00:00+00:00")
+        self.assertEqual(got["mode"], "unreadable")
+        self.assertIn("today.percent_of_week", got["reason"])
+
+    def test_unreadable_tokencount_not_installed(self):
+        got = self.usage(ROLLING, None, "2026-11-18T09:00:00+00:00",
+                         tokencount=os.path.join(self.dir, "missing"))
+        self.assertEqual(got["mode"], "unreadable")
+        self.assertIn("tokencount", got["reason"])
+
+    def test_unreadable_config_without_a_daily_cap_section(self):
+        import json
+        cfg = self.write("bare.md", "# Loop config\n")
+        out, _ = Main.run_main(self, ["--usage", cfg], {"TICKET_LOOP_NOW": "2026-11-18T09:00:00"})
+        self.assertEqual(json.loads(out)["mode"], "unreadable")
+
+    def test_status_line_agrees_with_the_usage_mode(self):
+        now = sl.parse_time("2026-11-18T09:00:00+00:00")
+        self.assertEqual(sl.usage_part(self.rolling_report(10.0), ROLLING, now),
+                         "Usage [███░░░░░░░] 10.0%/28.6% d2")
+
+
 class CapSection(unittest.TestCase):
     def test_reads_the_daily_cap_section(self):
         cfg = "# Loop config\n\n## Daily cap\n\nRolling: 14.3% a day.\n\n## Other\n\nx\n"
