@@ -224,6 +224,11 @@ class UsageMode(unittest.TestCase):
         self.assertEqual(got, {"mode": "rolling", "use": 15.0, "limit": 14.3, "day": 1,
                                "filled": 10, "over": True})
 
+    def test_rolling_at_the_limit_is_over(self):
+        # Day 3 of a 14.3% share: the limit is 42.9, not the float 42.900000000000006.
+        got = self.usage(ROLLING, self.rolling_report(42.9), "2026-11-19T09:00:00+00:00")
+        self.assertEqual((got["day"], got["limit"], got["over"]), (3, 42.9, True))
+
     def test_per_day(self):
         report = {"usage_source": "live", "today": {"percent_of_week": 6.1}}
         got = self.usage("14.3% of the plan's weekly usage per day.", report,

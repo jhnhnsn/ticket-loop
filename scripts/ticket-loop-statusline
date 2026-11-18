@@ -124,7 +124,8 @@ def usage_reading(report, cap, now):
                     "reason": "week.percent_used or week.resets_at is null or bad"}
         start = resets - timedelta(days=7)
         day = max(1, min(7, int((now - start).total_seconds() // 86400) + 1))
-        limit = min(100.0, share * day)
+        # Round off float noise (14.3 * 3 is 42.900000000000006) so a use at the limit is over.
+        limit = min(100.0, round(share * day, 6))
         return {"mode": "rolling", "use": round(use, 1), "limit": round(limit, 1), "day": day,
                 "filled": filled_cells(use, limit), "over": use >= limit}
     use = (report.get("today") or {}).get("percent_of_week")
