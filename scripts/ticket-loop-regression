@@ -71,7 +71,9 @@ def parse_stream(text):
             if not isinstance(part, dict):
                 continue
             if part.get("type") == "tool_use" and part.get("name") in ("Agent", "Task"):
-                inp = part.get("input") or {}
+                inp = part.get("input")
+                if not isinstance(inp, dict):
+                    inp = {}
                 dispatches.append({"description": inp.get("description") or "",
                                    "subagent_type": inp.get("subagent_type") or "",
                                    "model": inp.get("model"), "effort": inp.get("effort")})
@@ -85,7 +87,9 @@ def parse_stream(text):
         if kind == "result":
             report = ev.get("result")
             cost = ev.get("total_cost_usd")
-            models.update((ev.get("modelUsage") or {}).keys())
+            usage = ev.get("modelUsage")
+            if isinstance(usage, dict):
+                models.update(usage.keys())
     return {"models": sorted(models), "dispatches": dispatches, "refusals": refusals,
             "report": report, "cost_usd": cost}
 

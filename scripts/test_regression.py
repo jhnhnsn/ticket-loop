@@ -59,6 +59,21 @@ class ParseStream(unittest.TestCase):
         self.assertEqual(len(s["refusals"]), 1)
         self.assertEqual(s["report"], "Stopped at the refused command.")
 
+    def test_non_object_input_counts_as_an_empty_dispatch(self):
+        for inp in ('"x"', '["x"]'):
+            s = rg.parse_stream('{"type":"assistant","message":{"content":[{"type":"tool_use",'
+                                '"name":"Agent","input":%s}]}}' % inp)
+            self.assertEqual(s["dispatches"], [{"description": "", "subagent_type": "",
+                                                "model": None, "effort": None}])
+
+    def test_non_object_model_usage_adds_no_model_and_report_is_read(self):
+        for usage in ('["claude-sonnet-5-5"]', '"claude-sonnet-5-5"'):
+            s = rg.parse_stream('{"type":"result","result":"ok","total_cost_usd":0.1,'
+                                '"modelUsage":%s}' % usage)
+            self.assertEqual(s["models"], [])
+            self.assertEqual(s["report"], "ok")
+            self.assertAlmostEqual(s["cost_usd"], 0.1)
+
 
 class Grade(unittest.TestCase):
     def test_all_checks_hold_is_a_pass(self):
