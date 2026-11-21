@@ -165,6 +165,8 @@ Read them before you write anything for the moment they show, and print them:
      `#121 is in the test queue, running the browser suite (4 min). Tickets [░░░░░░░░░░] 0 of 1 shipped.`
      With no change, write exactly `No change since the last line.` and end your turn. When the No run rule is true and you have no line yet, say once that you have no status yet. At the next notices, write exactly `No change since the last line.` Don't guess.
 
+   **Late reports.** A report from one of the coordinator's subagents (a label such as `#<n> implement: …`) can reach the main thread after the coordinator handed back. Show it to the user as it is, under a line that names it as a late report from the coordinator's subagent. Say that running the same command again carries on from the commits and the ticket's comments. Don't act on it, and don't send it to anyone (#69, #10).
+
    When the user asks for progress, answer from the status file, the transcript, the tracker and `git log`, as above.
 
    **Status line.** The plugin has a status line script, `scripts/ticket-loop-statusline`, for Claude Code's `statusLine` setting. Setup offers to add it ([`SETUP.md`](SETUP.md)). It shows the status file and the Usage progress bar under the input box, and does not scroll. It makes no GitHub call.
