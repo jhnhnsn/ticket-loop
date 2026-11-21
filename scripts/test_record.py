@@ -35,12 +35,12 @@ class Store(unittest.TestCase):
         git("init", "--bare", "-q", path)
         return path
 
-    def run_script(self, *args, remote=None, home=None):
+    def run_script(self, *args, remote=None, home=None, script=SCRIPT):
         env = dict(os.environ, TICKET_LOOP_HOME=home or self.home)
         env.pop("TICKET_LOOP_STORE_REMOTE", None)
         if remote:
             env["TICKET_LOOP_STORE_REMOTE"] = remote
-        return subprocess.run([sys.executable, SCRIPT, *args], cwd=self.work,
+        return subprocess.run([sys.executable, script, *args], cwd=self.work,
                               env=env, capture_output=True, text=True)
 
     def record_file(self, record=RECORD, name="record.json"):
@@ -57,6 +57,65 @@ class Store(unittest.TestCase):
         self.assertEqual(r.returncode, 0)
         self.assertEqual(r.stdout.strip(), f"run record: written ({NAME}, no remote)")
         self.assertIn(NAME, self.committed(self.home))
+
+    def stored(self):
+        with open(os.path.join(self.home, NAME)) as f:
+            return json.load(f)
+
+    def plugin_copy(self, manifest):
+        """A copy of the script in a plugin folder whose plugin.json is manifest (None: no file)."""
+        plugin = os.path.join(self.tmp.name, "plugin")
+        os.makedirs(os.path.join(plugin, "scripts"))
+        os.makedirs(os.path.join(plugin, ".claude-plugin"))
+        if manifest is not None:
+            with open(os.path.join(plugin, ".claude-plugin", "plugin.json"), "w") as f:
+                f.write(manifest)
+        copy = os.path.join(plugin, "scripts", "ticket-loop-record")
+        with open(SCRIPT) as src, open(copy, "w") as dst:
+            dst.write(src.read())
+        return copy
+
+    def test_missing_plugin_version_is_filled_from_plugin_json(self):
+        script = self.plugin_copy('{"name": "x", "version": "9.8.7"}')
+        r = self.run_script("write", self.record_file(), script=script)
+        self.assertEqual(r.stdout.strip(), f"run record: written ({NAME}, no remote)")
+        self.assertEqual(self.stored()["plugin_version"], "9.8.7")
+
+    def test_null_plugin_version_is_filled(self):
+        script = self.plugin_copy('{"version": "1.2.3"}')
+        self.run_script("write", self.record_file(dict(RECORD, plugin_version=None)), script=script)
+        self.assertEqual(self.stored()["plugin_version"], "1.2.3")
+
+    def test_given_plugin_version_is_kept(self):
+        script = self.plugin_copy('{"version": "1.2.3"}')
+        self.run_script("write", self.record_file(dict(RECORD, plugin_version="0.1.0")),
+                        script=script)
+        self.assertEqual(self.stored()["plugin_version"], "0.1.0")
+
+    def test_unreadable_plugin_json_writes_null_and_says_so(self):
+        for manifest in (None, "not json", '{"name": "x"}'):
+            with self.subTest(manifest=manifest):
+                self.tearDown()
+                self.setUp()
+                script = self.plugin_copy(manifest)
+                r = self.run_script("write", self.record_file(), script=script)
+                self.assertEqual(r.stdout.strip(),
+                                 f"run record: written ({NAME}, no remote), null: plugin_version")
+                self.assertIsNone(self.stored()["plugin_version"])
+
+    def test_null_usage_values_are_named(self):
+        record = dict(RECORD, usage={"week_percent_before": None, "week_percent_after": 3.1})
+        r = self.run_script("write", self.record_file(record))
+        self.assertEqual(r.stdout.strip(),
+                         f"run record: written ({NAME}, no remote), null: usage.week_percent_before")
+
+    def test_plugin_and_usage_nulls_share_one_list(self):
+        script = self.plugin_copy(None)
+        record = dict(RECORD, usage={"week_percent_before": None, "week_percent_after": None})
+        r = self.run_script("write", self.record_file(record), script=script)
+        self.assertEqual(r.stdout.strip(),
+                         f"run record: written ({NAME}, no remote), null: plugin_version, "
+                         "usage.week_percent_after, usage.week_percent_before")
 
     def test_write_pushes_to_the_remote(self):
         remote = self.bare()
@@ -217,7 +276,7 @@ class Store(unittest.TestCase):
         self.assertEqual(r.stdout.strip(), "run store: not pulled (remote not available)")
 
     def test_due_lists_old_records_with_no_followup(self):
-        old = dict(RECORD, date="2020-01-01", commits=["abc123"])
+        old = dict(RECORD, date="2020-01-01", commits=["abc123"], plugin_version="0.1.0")
         self.run_script("write", self.record_file(old))
         self.run_script("write", self.record_file(dict(old, run_id="r2")))
         self.run_script("write", "--followup", self.record_file(dict(old, run_id="r2")))
@@ -231,7 +290,7 @@ class Store(unittest.TestCase):
         self.assertEqual(json.loads(lines[0]), old)
 
     def test_due_skips_a_record_that_is_not_json(self):
-        old = dict(RECORD, date="2020-01-01")
+        old = dict(RECORD, date="2020-01-01", plugin_version="0.1.0")
         self.run_script("write", self.record_file(old))
         folder = os.path.join(self.home, "runs", "demo")
         with open(os.path.join(folder, "2020-01-02-58-r1.json"), "w") as f:

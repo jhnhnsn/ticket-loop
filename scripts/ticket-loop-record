@@ -18,7 +18,10 @@ readable origin remote: the run must not guess a name.
 
 The store is a git repo at $TICKET_LOOP_HOME (default ~/.ticket-loop/). Each
 record is one file, runs/<project>/<date>-<ticket>-<run ID>.json, and never
-changes. $TICKET_LOOP_STORE_REMOTE names a private remote: a write pushes after
+changes. A write fills a missing or null plugin_version from the plugin's
+.claude-plugin/plugin.json (one folder up from this script), and its line names
+the record's null fields (", null: plugin_version, usage.week_percent_before").
+$TICKET_LOOP_STORE_REMOTE names a private remote: a write pushes after
 its commit, and the first write on a new machine clones it. Without a remote,
 the first write makes a local repo.
 
@@ -137,6 +140,28 @@ def sync_push(store):
     return git(store, "push", "-q", "origin", f"HEAD:{BRANCH}")
 
 
+def plugin_version():
+    """The version in the plugin.json of the plugin folder this script runs from, or None."""
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    try:
+        with open(os.path.join(here, ".claude-plugin", "plugin.json")) as f:
+            version = json.load(f).get("version")
+    except (OSError, ValueError, AttributeError):
+        return None
+    return version if isinstance(version, str) and version else None
+
+
+def fill(record):
+    """Fill a missing or null plugin_version; return the record's null fields, sorted."""
+    if record.get("plugin_version") is None:
+        record["plugin_version"] = plugin_version()
+    nulls = ["plugin_version"] if record["plugin_version"] is None else []
+    usage = record.get("usage")
+    if isinstance(usage, dict):
+        nulls += sorted(f"usage.{k}" for k, v in usage.items() if v is None)
+    return nulls
+
+
 def write(path, followup=False):
     if opted_out():
         return "run record: not written (off in the loop config)"
@@ -148,6 +173,8 @@ def write(path, followup=False):
     reason = check(record)
     if reason:
         return f"run record: not written (record not valid: {reason})"
+    nulls = [] if followup else fill(record)
+    null = f", null: {', '.join(nulls)}" if nulls else ""
     store, url = store_path(), remote()
     try:
         if not open_store(store, url):
@@ -171,11 +198,11 @@ def write(path, followup=False):
     except OSError:
         return "run record: not written (store not available)"
     if not url:
-        return f"run record: written ({name}, no remote)"
+        return f"run record: written ({name}, no remote){null}"
     if sync_push(store):
-        return f"run record: written ({name}, pushed)"
+        return f"run record: written ({name}, pushed){null}"
     return (f"run record: written ({name}), push failed: the commit stays local,"
-            " and the next write pushes it")
+            f" and the next write pushes it{null}")
 
 
 def pull():

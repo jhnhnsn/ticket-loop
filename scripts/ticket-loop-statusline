@@ -11,8 +11,9 @@ To keep an existing status line: python3 <this file> --with '<their command>'
 (their output comes first, then this line).
 
 For the loop: python3 <this file> --usage <loop config path> prints the daily cap's
-reading as one line of JSON (mode, use, limit, day, filled, over; or a reason), from a
-fresh tokencount report. The launcher's Usage bar and the coordinator's cap check use it.
+reading as one line of JSON (mode, use, limit, day, filled, over; or a reason) and week
+(week.percent_used, or null, in every mode), from a fresh tokencount report. The launcher's
+Usage bar, the coordinator's cap check and its run records' usage values use it.
 
 Test hooks (environment):
   TICKET_LOOP_USAGE_JSON  path to a tokencount --json report to use instead of tokencount
@@ -289,15 +290,26 @@ def _read(path):
         return None, None
 
 
-def usage_mode(args):
-    """--usage <loop config path>: print usage_reading() as one line of JSON.
+def week_use(report):
+    """tokencount's week.percent_used to one decimal, or None when it can't be read."""
+    if not report or report.get("usage_source") == "unavailable":
+        return None
+    use = (report.get("week") or {}).get("percent_used")
+    return None if not isinstance(use, (int, float)) or isinstance(use, bool) else round(use, 1)
 
-    Reads a fresh tokencount report (never the status line's cache), and none when the
-    cap is not applicable. Any failure still prints an unreadable line, never nothing.
+
+def usage_mode(args):
+    """--usage <loop config path>: print usage_reading() and week as one line of JSON.
+
+    Reads a fresh tokencount report (never the status line's cache) in every mode, as
+    week (the run record's usage values) needs it even when the cap is not applicable.
+    Any failure still prints an unreadable line, never nothing.
     """
+    report = None
     try:
         if len(args) != 1:
             raise ValueError("usage: ticket-loop-statusline --usage <loop config path>")
+        report = _usage(fresh=True)
         config, _ = _read(args[0])
         if config is None:
             raise ValueError("can't read the loop config at %s" % args[0])
@@ -306,10 +318,10 @@ def usage_mode(args):
         now = parse_time(now_env) if now_env else datetime.now(timezone.utc)
         if now is None:
             raise ValueError("TICKET_LOOP_NOW is not an ISO time")
-        report = None if cap is None or _not_applicable(cap) else _usage(fresh=True)
         reading = usage_reading(report, cap, now)
     except Exception as e:
         reading = {"mode": "unreadable", "reason": str(e) or type(e).__name__}
+    reading["week"] = week_use(report)
     print(json.dumps(reading))
 
 
