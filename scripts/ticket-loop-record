@@ -23,7 +23,8 @@ its commit, and the first write on a new machine clones it. Without a remote,
 the first write makes a local repo.
 
 The script never fails a run: every store outcome exits 0 with one line on
-stdout for the ticket report. Only wrong usage exits 2. A project opts out with
+stdout for the ticket report. Only no readable origin remote (for `project` and
+`due` with no project) exits 1, and only wrong usage exits 2. A project opts out with
 a `## Run records` section of `Off.` in docs/agents/ticket-loop.md (the current
 directory's loop config).
 

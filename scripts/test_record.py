@@ -286,7 +286,7 @@ class Store(unittest.TestCase):
 
     def test_due_with_no_argument_uses_the_project(self):
         self.set_origin("git@github.com:jhnhnsn/demo.git")
-        old = dict(RECORD, date="2020-01-01")
+        old = dict(RECORD, date="2020-01-01", plugin_version="0.1.0")
         self.run_script("write", self.record_file(old))
         r = self.run_script("due")
         self.assertEqual(r.returncode, 0)
