@@ -260,6 +260,49 @@ class Store(unittest.TestCase):
         self.assertEqual(r.stdout.strip(), "run store: no records due (no store yet)")
         self.assertEqual(self.run_script("due", "../up").returncode, 2)
 
+    def set_origin(self, url):
+        git("init", "-q", cwd=self.work)
+        git("remote", "add", "origin", url, cwd=self.work)
+
+    def test_project_from_an_https_remote(self):
+        self.set_origin("https://github.com/jhnhnsn/ticket-loop.git")
+        r = self.run_script("project")
+        self.assertEqual((r.returncode, r.stdout.strip()), (0, "ticket-loop"))
+
+    def test_project_from_an_ssh_remote(self):
+        self.set_origin("git@github.com:jhnhnsn/ticket-loop")
+        r = self.run_script("project")
+        self.assertEqual((r.returncode, r.stdout.strip()), (0, "ticket-loop"))
+
+    def test_project_for_the_sandbox(self):
+        self.set_origin("https://github.com/jhnhnsn/ticket-loop-sandbox.git")
+        self.assertEqual(self.run_script("project").stdout.strip(), "_sandbox")
+
+    def test_project_with_no_remote(self):
+        git("init", "-q", cwd=self.work)
+        r = self.run_script("project")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertEqual(r.stdout.strip(), "run store: no project (no readable origin remote)")
+
+    def test_due_with_no_argument_uses_the_project(self):
+        self.set_origin("git@github.com:jhnhnsn/demo.git")
+        old = dict(RECORD, date="2020-01-01")
+        self.run_script("write", self.record_file(old))
+        r = self.run_script("due")
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual([json.loads(n) for n in r.stdout.strip().splitlines()], [old])
+
+    def test_due_with_no_argument_and_no_remote(self):
+        r = self.run_script("due")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertEqual(r.stdout.strip(), "run store: no project (no readable origin remote)")
+
+    def test_due_for_an_unknown_project(self):
+        self.run_script("write", self.record_file())
+        r = self.run_script("due", "jhnhnsn-unknown")
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(r.stdout.strip(), "run store: no records for project jhnhnsn-unknown")
+
     def test_wrong_usage_exits_2(self):
         r = self.run_script("frob")
         self.assertEqual(r.returncode, 2)

@@ -4,9 +4,17 @@
   ticket-loop-record write <record.json>             add a record to the store
   ticket-loop-record write --followup <record.json>  add <record>.followup.json next to it
   ticket-loop-record pull                            pull the store from its remote
-  ticket-loop-record due <project>                   print the project's records older
+  ticket-loop-record due [<project>]                 print the project's records older
                                                      than 14 days with no followup,
-                                                     one compact JSON record per line
+                                                     one compact JSON record per line;
+                                                     with no project, the one below
+  ticket-loop-record project                         print the project value for the
+                                                     repo in the current folder: its
+                                                     origin repo name, or _sandbox for
+                                                     ticket-loop-sandbox
+
+`project` and `due` with no project exit 1 when the current folder has no
+readable origin remote: the run must not guess a name.
 
 The store is a git repo at $TICKET_LOOP_HOME (default ~/.ticket-loop/). Each
 record is one file, runs/<project>/<date>-<ticket>-<run ID>.json, and never
@@ -37,6 +45,8 @@ DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 RUN_ID = re.compile(r"^[A-Za-z0-9._:-]+$")
 FOLLOWUP_DAYS = 14
 SAFE = "letters, digits, '.', '_' and '-'"
+SANDBOX_REPO = "ticket-loop-sandbox"
+NO_PROJECT = "run store: no project (no readable origin remote)"
 
 
 def store_path():
@@ -180,6 +190,28 @@ def pull():
     return "run store: pulled"
 
 
+def project(repo="."):
+    """The project value for the repo at repo: its origin repo name, or _sandbox for
+    the sandbox repo. None with no readable origin remote."""
+    try:
+        r = subprocess.run(["git", "-C", repo, "remote", "get-url", "origin"],
+                           capture_output=True, text=True, stdin=subprocess.DEVNULL,
+                           timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    url = r.stdout.strip().rstrip("/")
+    if r.returncode != 0 or not url:
+        return None
+    name = re.split(r"[/:]", url)[-1]
+    if name.endswith(".git"):
+        name = name[:-len(".git")]
+    if name == SANDBOX_REPO:
+        return "_sandbox"
+    if not PROJECT.match(name) or name in (".", ".."):
+        return None
+    return name
+
+
 def due(project, today=None):
     """The project's records older than FOLLOWUP_DAYS with no followup, one per line
     as compact JSON. A record file that is not a JSON object is skipped."""
@@ -187,8 +219,10 @@ def due(project, today=None):
     folder = os.path.join(store, "runs", project)
     if not os.path.isdir(os.path.join(store, ".git")):
         return "run store: no records due (no store yet)"
+    if not os.path.isdir(folder):
+        return f"run store: no records for project {project}"
     today = today or datetime.date.today()
-    names = os.listdir(folder) if os.path.isdir(folder) else []
+    names = os.listdir(folder)
     found = []
     for n in sorted(names):
         if not n.endswith(".json") or n.endswith(".followup.json"):
@@ -210,6 +244,13 @@ def due(project, today=None):
 
 
 def main(argv):
+    if argv in (["project"], ["due"]):
+        name = project()
+        if not name:
+            print(NO_PROJECT)
+            return 1
+        print(name if argv == ["project"] else due(name))
+        return 0
     if argv[:1] == ["due"] and len(argv) == 2 and PROJECT.match(argv[1]) \
             and argv[1] not in (".", ".."):
         print(due(argv[1]))
