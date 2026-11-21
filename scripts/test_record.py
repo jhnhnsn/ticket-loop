@@ -92,16 +92,25 @@ class Store(unittest.TestCase):
                         script=script)
         self.assertEqual(self.stored()["plugin_version"], "0.1.0")
 
-    def test_unreadable_plugin_json_writes_null_and_says_so(self):
-        for manifest in (None, "not json", '{"name": "x"}'):
-            with self.subTest(manifest=manifest):
-                self.tearDown()
-                self.setUp()
-                script = self.plugin_copy(manifest)
-                r = self.run_script("write", self.record_file(), script=script)
-                self.assertEqual(r.stdout.strip(),
-                                 f"run record: written ({NAME}, no remote), null: plugin_version")
-                self.assertIsNone(self.stored()["plugin_version"])
+    def assert_unreadable_manifest_writes_null(self, manifest):
+        script = self.plugin_copy(manifest)
+        r = self.run_script("write", self.record_file(), script=script)
+        self.assertEqual(r.stdout.strip(),
+                         f"run record: written ({NAME}, no remote), null: plugin_version")
+        self.assertIsNone(self.stored()["plugin_version"])
+
+    def test_missing_plugin_json_writes_null_and_says_so(self):
+        self.assert_unreadable_manifest_writes_null(None)
+
+    def test_broken_plugin_json_writes_null_and_says_so(self):
+        self.assert_unreadable_manifest_writes_null("not json")
+
+    def test_plugin_json_without_version_writes_null_and_says_so(self):
+        self.assert_unreadable_manifest_writes_null('{"name": "x"}')
+
+    def test_null_usage_is_named(self):
+        r = self.run_script("write", self.record_file(dict(RECORD, usage=None)))
+        self.assertEqual(r.stdout.strip(), f"run record: written ({NAME}, no remote), null: usage")
 
     def test_null_usage_values_are_named(self):
         record = dict(RECORD, usage={"week_percent_before": None, "week_percent_after": 3.1})

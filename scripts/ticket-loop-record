@@ -157,7 +157,9 @@ def fill(record):
         record["plugin_version"] = plugin_version()
     nulls = ["plugin_version"] if record["plugin_version"] is None else []
     usage = record.get("usage")
-    if isinstance(usage, dict):
+    if "usage" in record and usage is None:
+        nulls.append("usage")
+    elif isinstance(usage, dict):
         nulls += sorted(f"usage.{k}" for k, v in usage.items() if v is None)
     return nulls
 
