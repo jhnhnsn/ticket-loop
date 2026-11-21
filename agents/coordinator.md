@@ -135,7 +135,11 @@ A loop config with no `## Repos` section is single-repo: every ticket changes on
    **Claim.** Claim a chosen ticket before any dispatch for it, the researcher included. A parallel offer claims nothing: claim the set after the user's answer. The **run ID** is your own agent label and the claim time in UTC (`date -u +%Y-%m-%dT%H:%MZ`). Your agent label is the one the launcher's dispatch gave you: `ticket-loop: <the run's name> coordinator <n>`, with the run's name and coordinator count from your brief, for example `ticket-loop: #167 coordinator 1`. Never put the claimed ticket's number in its place, and never drop the count. Every claim and release comment for a ticket in this run uses the same run ID: the claim time is the time of its claim comment. On GitHub, do these in order, each in its own call:
    1. Assign the ticket to the run's user and add the label: `gh issue edit <n> --repo <repo> --add-assignee @me --add-label in-progress`. `in-progress` is a literal name in every project, as `research` is.
    2. Post a claim comment: `Claimed by <your agent label> (run <claim time>).`, for example `Claimed by ticket-loop: #82 #84 coordinator 1 (run 2026-11-14T15:02Z).`
-   3. Read the ticket's comments again with the config's read command. Find the claim comments that have no later release comment with the same run ID (see Release). The earliest of them wins. Use the config's read command as it is. If the re-read fails, retry it once, as the Bash rules say. If it fails again, the claim is not confirmed: never treat a failed read as no other claim. Release the claim (remove the `in-progress` label, keep the assignee, and post a release comment, see Release), skip the ticket with a word on why (`#84: skipped, claim not confirmed (comments unreadable).`), and name it in your next hand-back, as for a claimed ticket.
+   3. Read the ticket's comments again with the config's read command. Find the claim comments that have no later release comment with the same run ID (see Release). The earliest of them wins. If the re-read fails, retry it once, as the Bash rules say. If it fails again, the claim is not confirmed: never treat a failed read as no other claim. Then:
+      - Remove the `in-progress` label and keep the assignee.
+      - Post a release comment (see Release): `Released by <your agent label> (run <claim time>): claim not confirmed.`
+      - Skip the ticket, and name it in your next hand-back (see Hand-back).
+      - A ticket of a parallel set whose claim is not confirmed leaves the set; with fewer than two left, build the one left alone.
 
    On another tracker, use its assign, label and comment commands, as the config's tracker says.
 
@@ -215,9 +219,11 @@ A hand-back is one of:
 - **parallel offer** (step 1): the parallel set's tickets, number and title, in order, and the limit. Nothing is dispatched for them. The launcher asks the user the offer question and resumes you with accept or decline. Step 1 says what a headless run does instead.
 - a **stop condition** (which one, and what the user needs to know or do), then what's next.
 
-Every hand-back also names each claimed ticket that step 1 skipped, as `#84: skipped, claimed by another worker (in-progress).`, and each ticket skipped as `#84: skipped, claim not confirmed (comments unreadable).` Under those lines, add this note once: `If no other worker runs on a skipped ticket, its claim is stale. To free it, remove the in-progress label and post a release comment with that claim's run ID.`
+Every hand-back also names each claimed ticket that step 1 skipped, as `#84: skipped, claimed by another worker (in-progress).` Under those lines, add this note once: `If no other worker runs on a skipped ticket, its claim is stale. To free it, remove the in-progress label and post a release comment with that claim's run ID.`
 
-**Release.** A claim stays live until a release comment with its run ID follows it. Ship, a give-way and a claim not confirmed post one (steps 5 and 1). A hand-back that ends the run with a claimed ticket not shipped also releases it. These hand-backs end the run:
+It also names each ticket whose claim step 1 could not confirm, as `#84: skipped, claim not confirmed (comments unreadable).` That claim is already released, so the stale-claim note doesn't cover it.
+
+**Release.** A claim stays live until a release comment with its run ID follows it. Ship, a give-way and a claim not confirmed post one (step 5, and step 1's Claim, item 3). A hand-back that ends the run with a claimed ticket not shipped also releases it. These hand-backs end the run:
 - a stop condition;
 - a cap stop: stop here, or cap reached in a headless run;
 - a decision needed in a headless run.
