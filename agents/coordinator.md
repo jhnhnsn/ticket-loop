@@ -136,16 +136,16 @@ A loop config with no `## Repos` section is single-repo: every ticket changes on
    1. Assign the ticket to the run's user and add the label: `gh issue edit <n> --repo <repo> --add-assignee @me --add-label in-progress`. `in-progress` is a literal name in every project, as `research` is.
    2. Post a claim comment: `Claimed by <your agent label> (run <claim time>).`, for example `Claimed by ticket-loop: #82 #84 coordinator 1 (run 2026-11-14T15:02Z).`
    3. Read the ticket's comments again with the config's read command. Find the claim comments that have no later release comment with the same run ID (see Release). The earliest of them wins. If the re-read fails, retry it once, as the Bash rules say. If it fails again, the claim is not confirmed: never treat a failed read as no other claim. Then:
-      - Remove the `in-progress` label and keep the assignee.
+      - Remove the `in-progress` label and keep the assignee. The claim comments decide the claim: a later run that finds no label still gives way to a live claim after its own re-read. Claims never expire, so a stale label would block the ticket.
       - Post a release comment (see Release): `Released by <your agent label> (run <claim time>): claim not confirmed.`
-      - Skip the ticket, and name it in your next hand-back (see Hand-back).
+      - Skip the ticket, and name it in your next hand-back (see Hand-back). Write no run record for it: the run did no work on it.
       - A ticket of a parallel set whose claim is not confirmed leaves the set; with fewer than two left, build the one left alone.
 
    On another tracker, use its assign, label and comment commands, as the config's tracker says.
 
    If the earliest live claim isn't yours, give way:
    - Post a release comment for your own claim (see Release). Remove no label and no assignee.
-   - Skip the ticket, and say why in a word.
+   - Skip the ticket, and say why in a word. Write no run record for it: the run did no work on it.
    - Go on with the frontier. A ticket of a parallel set that another run wins leaves the set; with fewer than two left, build the one left alone. Claim every ticket of a set before its first dispatch.
 
    A resume after a decision needed or cap reached hand-back keeps the claim: don't claim the ticket again. A budget reached hand-back comes before the claim, so it leaves no ticket claimed.
@@ -223,7 +223,7 @@ Every hand-back also names each claimed ticket that step 1 skipped, as `#84: ski
 
 It also names each ticket whose claim step 1 could not confirm, as `#84: skipped, claim not confirmed (comments unreadable).` That claim is already released, so the stale-claim note doesn't cover it.
 
-**Release.** A claim stays live until a release comment with its run ID follows it. Ship, a give-way and a claim not confirmed post one (step 5, and step 1's Claim, item 3). A hand-back that ends the run with a claimed ticket not shipped also releases it. These hand-backs end the run:
+**Release.** A claim stays live until a release comment with its run ID follows it. Ship, a give-way and a claim not confirmed post one (step 5, and step 1's Claim, item 3); the last two write no run record. A hand-back that ends the run with a claimed ticket not shipped also releases it. These hand-backs end the run:
 - a stop condition;
 - a cap stop: stop here, or cap reached in a headless run;
 - a decision needed in a headless run.
@@ -304,7 +304,7 @@ The **run store** holds the run records of all projects and machines: a git repo
 - `python3 <plugin>/scripts/ticket-loop-record project` prints the run's `project` value (see the `project` key below) for the repo in the current folder. Every coordinator, coordinator 1 or a fresh one after a budget reached hand-back, runs it once from the home repo, before its first `due` or `write`. Use the value it prints for every `due`, `write` and `write --followup` that coordinator makes. Never make up a project name. If it prints `run store: no project …`, skip the 14-day check, and put that line in each report in place of the run record.
 - `python3 <plugin>/scripts/ticket-loop-record due <project>` lists the project's records with no followup file. `<project>` is the value that `project` printed. It lists only the records older than 14 days. It prints each record as one line of compact JSON, or a line that starts with `run store: no records due`. A project with no records in the store prints `run store: no records for project <name>`: check that the name is the one `project` printed. It skips a record file that is not valid JSON.
 
-**Run records.** Every ticket of the run writes one record, shipped or stopped. This includes headless runs and each ticket of a parallel build. Write the record in step 6 for a shipped ticket. Write it at the release for a ticket that a hand-back leaves not shipped at the end of the run (see Hand-back, Release). A decision needed or cap reached hand-back that the launcher resumes writes no record, because the ticket is still in hand. The record is one JSON object with these keys:
+**Run records.** Every ticket of the run writes one record, shipped or stopped. A give-way or a claim not confirmed writes none, since the run did no work on the ticket (see Steps, step 1). This includes headless runs and each ticket of a parallel build. Write the record in step 6 for a shipped ticket. Write it at the release for a ticket that a hand-back leaves not shipped at the end of the run (see Hand-back, Release). A decision needed or cap reached hand-back that the launcher resumes writes no record, because the ticket is still in hand. The record is one JSON object with these keys:
 - `project`: the name of the repo, for example `ticket-loop` for `jhnhnsn/ticket-loop`. In the sandbox repo `jhnhnsn/ticket-loop-sandbox`, the project is `_sandbox`, not the repo name. Use this one project value for `write`, `write --followup` and `due`. The `project` command computes it from the home repo's `origin` remote: get it with that command, not by hand.
 - `ticket`: the ticket number.
 - `run_id`: the claim time part of the run ID, from the claim comment (step 1, Claim). The store allows no spaces or `#` in it, so the agent label goes in `coordinator`.
